@@ -11,6 +11,7 @@ const NAV = [
   { href: "/documentos", label: "Documentos" },
   { href: "/tareas", label: "Tareas" },
   { href: "/evidencias", label: "Evidencias" },
+  { href: "/expediente", label: "Expediente" },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {

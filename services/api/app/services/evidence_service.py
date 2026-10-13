@@ -158,17 +158,26 @@ async def list_evidence(db: AsyncSession, actor: CurrentUser, task_id: str) -> E
     return EvidenceList(items=[_out(ev, name) for ev, name in rows])
 
 
+async def check_integrity(tenant_id: str, ev: EvidenceFile) -> tuple[str, str | None]:
+    """Recalcula la huella del archivo guardado: ("OK" | "TAMPERED" | "MISSING", huella actual)."""
+    data = await asyncio.to_thread(_read, _path(tenant_id, ev.id, ev.mime_type))
+    if data is None:
+        return "MISSING", None
+    computed = sha256_bytes(data)
+    return ("OK" if computed == ev.sha256 else "TAMPERED"), computed
+
+
 async def verify_evidence(db: AsyncSession, actor: CurrentUser, evidence_id: str) -> VerifyResult:
     ev, task = await _load(db, actor, evidence_id)
-    data = await asyncio.to_thread(_read, _path(task.tenant_id, ev.id, ev.mime_type))
+    state, computed = await check_integrity(task.tenant_id, ev)
 
-    if data is None:
-        computed, reason = None, "El archivo guardado no está disponible."
-    else:
-        computed = sha256_bytes(data)
-        reason = None if computed == ev.sha256 else "La huella del archivo ya no coincide."
+    reason = None
+    if state == "MISSING":
+        reason = "El archivo guardado no está disponible."
+    elif state == "TAMPERED":
+        reason = "La huella del archivo ya no coincide."
 
-    ok = reason is None
+    ok = state == "OK"
     if not ok:
         # TODO(Luis): escribir EVIDENCE_TAMPERED en audit_logs cuando exista AuditService
         log.warning("EVIDENCE_TAMPERED evidence=%s task=%s tenant=%s", ev.id, task.id, task.tenant_id)
