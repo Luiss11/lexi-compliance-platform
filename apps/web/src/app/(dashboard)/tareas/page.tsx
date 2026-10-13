@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { API_URL, getSession, getToken } from "@/lib/session";
 import {
@@ -149,16 +150,29 @@ export default async function TareasPage({
                       </span>
                     )}
                   </div>
+                  {t.status !== "BACKLOG" && (
+                    <Link
+                      href={`/tareas/${t.id}/evidencia`}
+                      className="flex min-h-11 items-center text-xs font-medium text-lexi underline"
+                    >
+                      Evidencia ({t.evidence_count})
+                    </Link>
+                  )}
+                  {t.status === "IN_PROGRESS" && t.evidence_count === 0 && (
+                    <p className="text-xs text-muted">Sube una evidencia para enviarla a revisión.</p>
+                  )}
                   <div className="flex flex-wrap gap-2">
-                    {allowedMoves(t.status, role).map((to) => (
-                      <form key={to} action={moveTaskAction}>
-                        <input type="hidden" name="id" value={t.id} />
-                        <input type="hidden" name="status" value={to} />
-                        <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]">
-                          Pasar a {STATUS_LABEL[to].toLowerCase()}
-                        </button>
-                      </form>
-                    ))}
+                    {allowedMoves(t.status, role)
+                      .filter((to) => !(t.status === "IN_PROGRESS" && to === "IN_REVIEW" && t.evidence_count === 0))
+                      .map((to) => (
+                        <form key={to} action={moveTaskAction}>
+                          <input type="hidden" name="id" value={t.id} />
+                          <input type="hidden" name="status" value={to} />
+                          <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]">
+                            Pasar a {STATUS_LABEL[to].toLowerCase()}
+                          </button>
+                        </form>
+                      ))}
                   </div>
                 </article>
               ))}

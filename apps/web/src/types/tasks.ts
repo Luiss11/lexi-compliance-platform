@@ -17,6 +17,7 @@ export interface Task {
   citation: string | null;
   suggested_by_ai: boolean;
   overdue: boolean;
+  evidence_count: number;
   created_at: string;
 }
 

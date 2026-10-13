@@ -10,7 +10,7 @@ from app.api.v1.routers import tasks
 from app.core.errors import register_exception_handlers
 from app.core.security import Role, create_access_token
 from app.db.session import get_db
-from app.models.tables import Base, Priority, Task, TaskStatus, Tenant, User
+from app.models.tables import Base, EvidenceFile, Priority, Task, TaskStatus, Tenant, User
 
 
 def auth(user_id: str, tenant_id: str, role: Role) -> dict:
@@ -59,6 +59,15 @@ async def client():
         c.session_factory = Session
         yield c
     await engine.dispose()
+
+
+async def add_evidence(client, task_id, uploader="u-op"):
+    """Inserta una evidencia directamente en la base (la subida real se prueba en test_evidence)."""
+    async with client.session_factory() as s:
+        s.add(EvidenceFile(id=f"ev-{task_id}-{uploader}", task_id=task_id, uploaded_by_id=uploader,
+                           filename="foto.jpg", mime_type="image/jpeg", size_bytes=10,
+                           sha256="0" * 64, ai_verdict="NOT_REVIEWED"))
+        await s.commit()
 
 
 async def make(client, headers=ADMIN, **kw):
@@ -166,6 +175,7 @@ async def test_happy_path_through_all_states(client):
     url = f"/api/v1/tasks/{t['id']}/status"
     r = await client.patch(url, json={"status": "IN_PROGRESS"}, headers=OPERATOR)
     assert r.status_code == 200 and r.json()["status"] == "IN_PROGRESS"
+    await add_evidence(client, t["id"])
     r = await client.patch(url, json={"status": "IN_REVIEW"}, headers=OPERATOR)
     assert r.json()["status"] == "IN_REVIEW"
     r = await client.patch(url, json={"status": "DONE"}, headers=COMPLIANCE)
@@ -188,8 +198,9 @@ async def test_invalid_transition(client):
 async def test_operator_cannot_close_or_reopen(client):
     t = await make(client, assignee_id="u-op")
     url = f"/api/v1/tasks/{t['id']}/status"
-    for s in ("IN_PROGRESS", "IN_REVIEW"):
-        await client.patch(url, json={"status": s}, headers=OPERATOR)
+    await client.patch(url, json={"status": "IN_PROGRESS"}, headers=OPERATOR)
+    await add_evidence(client, t["id"])
+    await client.patch(url, json={"status": "IN_REVIEW"}, headers=OPERATOR)
     r = await client.patch(url, json={"status": "DONE"}, headers=OPERATOR)
     assert r.status_code == 403
     await client.patch(url, json={"status": "DONE"}, headers=ADMIN)
@@ -239,7 +250,9 @@ async def test_overdue_flag(client):
     assert items[future["id"]]["overdue"] is False
     # Una tarea cerrada ya no está vencida
     url = f"/api/v1/tasks/{late['id']}/status"
-    for s in ("IN_PROGRESS", "IN_REVIEW", "DONE"):
+    await client.patch(url, json={"status": "IN_PROGRESS"}, headers=ADMIN)
+    await add_evidence(client, late["id"], uploader="u-op")
+    for s in ("IN_REVIEW", "DONE"):
         await client.patch(url, json={"status": s}, headers=ADMIN)
     assert (await client.get(f"/api/v1/tasks/{late['id']}", headers=ADMIN)).json()["overdue"] is False
 
@@ -251,3 +264,40 @@ async def test_assignees_list_managers_only(client):
     names = [u["full_name"] for u in r.json()["items"]]
     assert "Foráneo" not in names and "Op Uno" in names
     assert (await client.get("/api/v1/tasks/assignees", headers=OPERATOR)).status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_review_requires_evidence(client):
+    t = await make(client, assignee_id="u-op")
+    url = f"/api/v1/tasks/{t['id']}/status"
+    await client.patch(url, json={"status": "IN_PROGRESS"}, headers=OPERATOR)
+    r = await client.patch(url, json={"status": "IN_REVIEW"}, headers=OPERATOR)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "EVIDENCE_REQUIRED"
+    await add_evidence(client, t["id"])
+    r = await client.patch(url, json={"status": "IN_REVIEW"}, headers=OPERATOR)
+    assert r.status_code == 200
+    assert r.json()["evidence_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_uploader_cannot_approve_own_evidence(client):
+    t = await make(client, assignee_id="u-op")
+    url = f"/api/v1/tasks/{t['id']}/status"
+    await client.patch(url, json={"status": "IN_PROGRESS"}, headers=ADMIN)
+    await add_evidence(client, t["id"], uploader="u-admin")
+    await client.patch(url, json={"status": "IN_REVIEW"}, headers=ADMIN)
+    r = await client.patch(url, json={"status": "DONE"}, headers=ADMIN)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "FORBIDDEN"
+    # Otro oficial sí puede cerrarla
+    r = await client.patch(url, json={"status": "DONE"}, headers=COMPLIANCE)
+    assert r.status_code == 200 and r.json()["status"] == "DONE"
+
+
+@pytest.mark.asyncio
+async def test_evidence_count_in_list(client):
+    t = await make(client, assignee_id="u-op")
+    await make(client, title="Otra tarea")
+    await add_evidence(client, t["id"])
+    items = {i["id"]: i for i in (await client.get("/api/v1/tasks", headers=ADMIN)).json()["items"]}
+    assert items[t["id"]]["evidence_count"] == 1
+    assert sorted(i["evidence_count"] for i in items.values()) == [0, 1]

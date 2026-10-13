@@ -77,6 +77,7 @@ class TaskOut(BaseModel):
     citation: str | None
     suggested_by_ai: bool
     overdue: bool = False
+    evidence_count: int = 0
     created_at: datetime
 
 

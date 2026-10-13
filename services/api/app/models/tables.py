@@ -102,3 +102,24 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(
         "createdAt", DateTime, server_default=func.now()
     )
+
+
+class EvidenceFile(Base):
+    """Evidencia inmutable de una tarea. No tiene tenantId: el tenant se obtiene por la tarea.
+
+    El archivo vive en STORAGE_DIR/<tenant>/evidence/<id><ext>; la ruta se deriva del id y del
+    tipo, por eso la tabla no necesita una columna de ruta (no hay migración).
+    """
+
+    __tablename__ = "evidence_files"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    task_id: Mapped[str] = mapped_column("taskId", ForeignKey("tasks.id"))
+    uploaded_by_id: Mapped[str] = mapped_column("uploadedById", ForeignKey("users.id"))
+    filename: Mapped[str] = mapped_column(String)
+    mime_type: Mapped[str] = mapped_column("mimeType", String)
+    size_bytes: Mapped[int] = mapped_column("sizeBytes", Integer)
+    sha256: Mapped[str] = mapped_column(String)
+    ai_verdict: Mapped[str | None] = mapped_column("aiVerdict", String)
+    created_at: Mapped[datetime] = mapped_column(
+        "createdAt", DateTime, server_default=func.now()
+    )

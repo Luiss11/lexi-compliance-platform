@@ -15,7 +15,7 @@ from uuid import uuid4
 
 from app.core.errors import AppError, forbidden
 from app.core.security import CurrentUser, Role
-from app.models.tables import Task, TaskStatus, User
+from app.models.tables import EvidenceFile, Task, TaskStatus, User
 from app.schemas.tasks import TaskCreate, TaskList, TaskOut, TaskStatusChange, TaskUpdate
 
 S = TaskStatus
@@ -42,7 +42,7 @@ def _to_naive_utc(d: date | None) -> datetime | None:
     return datetime(d.year, d.month, d.day)
 
 
-def _out(task: Task, assignee_name: str | None) -> TaskOut:
+def _out(task: Task, assignee_name: str | None, evidence_count: int = 0) -> TaskOut:
     overdue = (
         task.due_date is not None
         and task.status != S.DONE
@@ -51,7 +51,25 @@ def _out(task: Task, assignee_name: str | None) -> TaskOut:
     out = TaskOut.model_validate(task)
     out.assignee_name = assignee_name
     out.overdue = overdue
+    out.evidence_count = evidence_count
     return out
+
+
+async def _evidence_counts(db: AsyncSession, task_ids: list[str]) -> dict[str, int]:
+    if not task_ids:
+        return {}
+    rows = await db.execute(
+        select(EvidenceFile.task_id, func.count())
+        .where(EvidenceFile.task_id.in_(task_ids))
+        .group_by(EvidenceFile.task_id)
+    )
+    return {tid: n for tid, n in rows.all()}
+
+
+async def load_task(db: AsyncSession, actor: CurrentUser, task_id: str) -> Task:
+    """Tarea visible para el actor (mismo tenant; el operador solo ve las suyas) o 404."""
+    task, _ = await _get_task(db, actor, task_id)
+    return task
 
 
 async def _get_task(db: AsyncSession, actor: CurrentUser, task_id: str) -> tuple[Task, str | None]:
@@ -109,12 +127,14 @@ async def list_tasks(
     if status:
         query = query.where(Task.status == status)
     rows = (await db.execute(query)).all()
-    return TaskList(items=[_out(t, name) for t, name in rows])
+    counts = await _evidence_counts(db, [t.id for t, _ in rows])
+    return TaskList(items=[_out(t, name, counts.get(t.id, 0)) for t, name in rows])
 
 
 async def get_task(db: AsyncSession, actor: CurrentUser, task_id: str) -> TaskOut:
     task, name = await _get_task(db, actor, task_id)
-    return _out(task, name)
+    counts = await _evidence_counts(db, [task.id])
+    return _out(task, name, counts.get(task.id, 0))
 
 
 async def create_task(db: AsyncSession, actor: CurrentUser, body: TaskCreate) -> TaskOut:
@@ -172,7 +192,8 @@ async def update_task(
 
     await db.commit()
     await db.refresh(task)
-    return _out(task, name)
+    counts = await _evidence_counts(db, [task.id])
+    return _out(task, name, counts.get(task.id, 0))
 
 
 async def change_status(
@@ -181,8 +202,11 @@ async def change_status(
     task, name = await _get_task(db, actor, task_id)
     target = body.status
 
+    counts = await _evidence_counts(db, [task.id])
+    n_evidence = counts.get(task.id, 0)
+
     if target == task.status:
-        return _out(task, name)
+        return _out(task, name, n_evidence)
 
     if not _is_manager(actor) and target == S.DONE:
         raise forbidden("Solo un oficial de cumplimiento puede cerrar una tarea.")
@@ -198,10 +222,29 @@ async def change_status(
              "allowed": sorted(s.value for s in TRANSITIONS[task.status])},
         )
 
+    # SDD §5.3: para pasar a revisión hace falta al menos una evidencia sellada
+    if target == S.IN_REVIEW and task.status == S.IN_PROGRESS and n_evidence == 0:
+        raise AppError(
+            409, "EVIDENCE_REQUIRED",
+            "Sube al menos una evidencia antes de enviar la tarea a revisión.",
+        )
+
+    # SDD §5.3: quien revisa no puede ser quien subió la evidencia (separación de funciones)
+    if target == S.DONE:
+        own = (
+            await db.execute(
+                select(func.count()).select_from(EvidenceFile).where(
+                    EvidenceFile.task_id == task.id, EvidenceFile.uploaded_by_id == actor.id
+                )
+            )
+        ).scalar_one()
+        if own:
+            raise forbidden("No puedes aprobar una tarea con evidencia que subiste tú.")
+
     task.status = target
     await db.commit()
     await db.refresh(task)
-    return _out(task, name)
+    return _out(task, name, n_evidence)
 
 
 async def list_assignees(db: AsyncSession, actor: CurrentUser) -> list[dict]:
