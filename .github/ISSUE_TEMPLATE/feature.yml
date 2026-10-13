@@ -1,0 +1,33 @@
+name: Historia de usuario / tarea
+description: Nueva funcionalidad o tarea técnica del backlog
+title: "[TASK-XX] "
+labels: ["feature"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options: ["PM", "QA", "AI/BE", "FS/SEC"]
+    validations: { required: true }
+  - type: textarea
+    id: historia
+    attributes:
+      label: Historia de usuario
+      placeholder: "Como <rol>, quiero <acción> para <beneficio>."
+    validations: { required: true }
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      placeholder: "- [ ] Dado ... cuando ... entonces ..."
+    validations: { required: true }
+  - type: dropdown
+    id: puntos
+    attributes:
+      label: Story points
+      options: ["1", "2", "3", "5", "8", "13"]
+  - type: input
+    id: hito
+    attributes:
+      label: Hito
+      placeholder: "Hito 1 · Semanas 1-3"
