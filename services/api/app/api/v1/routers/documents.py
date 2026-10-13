@@ -1,39 +1,49 @@
-import os
-import uuid
+from fastapi import APIRouter, Depends, File, Form, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-
-from app.core.config import settings
+from app.core.errors import AppError
 from app.core.security import CurrentUser, Role, require_roles
-from app.rag.chunker import chunk_blocks
-from app.rag.indexer import index_chunks
-from app.rag.parser import has_text_layer, parse_pdf
-from app.services.hashing import sha256_bytes
+from app.db.session import get_db
+from app.schemas.documents import DocumentList, DocumentOut
+from app.services import document_service
+from app.services.document_service import MAX_BYTES
 
 router = APIRouter()
 
+managers = require_roles(Role.ADMIN, Role.COMPLIANCE)
 
-@router.post("", status_code=201)
+
+@router.get("", response_model=DocumentList)
+async def list_documents(
+    actor: CurrentUser = Depends(managers), db: AsyncSession = Depends(get_db)
+) -> DocumentList:
+    return await document_service.list_documents(db, actor)
+
+
+@router.post("", response_model=DocumentOut, status_code=201)
 async def upload_document(
     file: UploadFile = File(...),
     category: str = Form(...),
-    user: CurrentUser = Depends(require_roles(Role.ADMIN, Role.COMPLIANCE)),
-) -> dict:
-    if file.content_type != "application/pdf":
-        raise HTTPException(415, "Solo se aceptan archivos PDF")
-    data = await file.read()
-    doc_id = str(uuid.uuid4())
-    folder = os.path.join(settings.storage_dir, user.tenant_id, "documents")
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, f"{doc_id}.pdf")
-    with open(path, "wb") as fh:
-        fh.write(data)
+    title: str | None = Form(default=None),
+    actor: CurrentUser = Depends(managers),
+    db: AsyncSession = Depends(get_db),
+) -> DocumentOut:
+    # Se lee un byte de más para detectar archivos que exceden el límite sin cargarlos enteros
+    data = await file.read(MAX_BYTES + 1)
+    if len(data) > MAX_BYTES:
+        raise AppError(413, "FILE_TOO_LARGE", "El PDF supera el límite de 20 MB.")
+    return await document_service.upload_document(db, actor, data, file.filename, category, title)
 
-    if not has_text_layer(path):
-        return {"id": doc_id, "status": "ERROR", "detail": "PDF escaneado: requiere OCR"}
 
-    chunks = chunk_blocks(parse_pdf(path))
-    n = await index_chunks(user.tenant_id, doc_id, file.filename or "documento.pdf", chunks)
-    # TODO(Yosvanni): persistir fila en documents con status INDEXED y sha256
-    return {"id": doc_id, "status": "INDEXED", "chunks": n, "sha256": sha256_bytes(data),
-            "category": category}
+@router.get("/{doc_id}", response_model=DocumentOut)
+async def get_document(
+    doc_id: str, actor: CurrentUser = Depends(managers), db: AsyncSession = Depends(get_db)
+) -> DocumentOut:
+    return await document_service.get_document(db, actor, doc_id)
+
+
+@router.post("/{doc_id}/index", response_model=DocumentOut)
+async def reindex_document(
+    doc_id: str, actor: CurrentUser = Depends(managers), db: AsyncSession = Depends(get_db)
+) -> DocumentOut:
+    return await document_service.reindex_document(db, actor, doc_id)

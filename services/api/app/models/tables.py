@@ -23,6 +23,16 @@ class TaskStatus(str, enum.Enum):
     DONE = "DONE"
 
 
+class DocumentStatus(str, enum.Enum):
+    """Mismos valores que el enum DocumentStatus de Prisma."""
+
+    UPLOADED = "UPLOADED"
+    PROCESSING = "PROCESSING"
+    INDEXED = "INDEXED"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+    ERROR = "ERROR"
+
+
 class Priority(str, enum.Enum):
     """Mismos valores que el enum Priority de Prisma."""
 
@@ -56,11 +66,18 @@ class Document(Base):
     tenant_id: Mapped[str] = mapped_column("tenantId", ForeignKey("tenants.id"))
     title: Mapped[str] = mapped_column(String)
     category: Mapped[str] = mapped_column(String)
-    status: Mapped[str] = mapped_column(String)
+    status: Mapped[DocumentStatus] = mapped_column(
+        Enum(DocumentStatus, name="DocumentStatus", create_type=False),
+        default=DocumentStatus.UPLOADED,
+    )
     pages: Mapped[int | None] = mapped_column(Integer)
+    chunks: Mapped[int | None] = mapped_column(Integer)
     sha256: Mapped[str] = mapped_column(String)
     storage_path: Mapped[str] = mapped_column("storagePath", String)
-    created_at: Mapped[datetime] = mapped_column("createdAt", DateTime)
+    uploaded_by: Mapped[str | None] = mapped_column("uploadedBy", String)
+    created_at: Mapped[datetime] = mapped_column(
+        "createdAt", DateTime, server_default=func.now()
+    )
 
 
 class Task(Base):

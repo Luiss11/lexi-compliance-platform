@@ -48,6 +48,8 @@ services:
     volumes:
       - ./apps/web/src:/app/src
       - ./apps/web/prisma:/app/prisma
+      # Montado para que un cambio en la configuración no obligue a reconstruir la imagen
+      - ./apps/web/next.config.mjs:/app/next.config.mjs
     ports: ["4000:3000"]
     depends_on:
       postgres: { condition: service_healthy }
