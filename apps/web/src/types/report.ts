@@ -44,6 +44,8 @@ export interface DossierEvidence {
   uploaded_by_name: string | null;
   uploaded_at: string;
   integrity: Integrity;
+  ai_verdict: string | null;
+  ai_summary: string | null;
 }
 
 export interface DossierTask {
@@ -69,6 +71,14 @@ export interface DossierDocument {
   uploaded_at: string;
 }
 
+export interface DossierAudit {
+  at: string;
+  actor_name: string | null;
+  action: string;
+  entity_type: string;
+  details: Record<string, unknown> | null;
+}
+
 export interface Dossier {
   tenant_name: string;
   generated_at: string;
@@ -81,8 +91,10 @@ export interface Dossier {
     overdue: number;
     evidence_files: number;
     integrity_failures: number;
+    ai_flagged: number;
   };
   documents: DossierDocument[];
   tasks: DossierTask[];
+  audit_trail: DossierAudit[];
   seal: string;
 }

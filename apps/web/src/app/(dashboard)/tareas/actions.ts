@@ -11,14 +11,14 @@ function fail(message: string): never {
   redirect(`/tareas?error=${encodeURIComponent(message)}`);
 }
 
-async function call(path: string, method: string, body: unknown): Promise<Response> {
+async function call(path: string, method: string, body?: unknown): Promise<Response> {
   const token = getToken();
   if (!token) redirect("/logout");
   try {
     return await fetch(`${API_URL}${path}`, {
       method,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
     });
   } catch {
@@ -64,5 +64,18 @@ export async function moveTaskAction(formData: FormData): Promise<void> {
   if (!res.ok) fail(await errorMessage(res));
 
   revalidatePath("/tareas");
+  redirect("/tareas");
+}
+
+export async function deleteTaskAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  if (!id) fail("Tarea no válida.");
+
+  const res = await call(`/tasks/${encodeURIComponent(id)}`, "DELETE");
+  if (res.status === 401) redirect("/logout");
+  if (!res.ok) fail(await errorMessage(res));
+
+  revalidatePath("/tareas");
+  revalidatePath("/panel");
   redirect("/tareas");
 }

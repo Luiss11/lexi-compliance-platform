@@ -120,8 +120,8 @@ async def test_empty_and_oversized(client, monkeypatch):
 @pytest.mark.asyncio
 async def test_each_upload_is_a_new_immutable_row(client):
     a = (await upload(client, JPEG)).json()
-    b = (await upload(client, JPEG)).json()  # mismo contenido: otra fila, otro archivo
-    assert a["id"] != b["id"] and a["sha256"] == b["sha256"]
+    b = (await upload(client, JPEG + b"segunda foto")).json()  # otro contenido: otra fila, otro archivo
+    assert a["id"] != b["id"] and a["sha256"] != b["sha256"]
     items = (await client.get("/api/v1/tasks/task-prog/evidence", headers=OPERATOR)).json()["items"]
     assert len(items) == 2
     files = os.listdir(client.storage / "t1" / "evidence")
@@ -147,7 +147,7 @@ async def test_permissions_and_isolation(client):
     assert (await client.get(f"/api/v1/evidence/{ev['id']}/file", headers=OTHER_OP)).status_code == 404
     assert (await client.get("/api/v1/tasks/task-prog/evidence", headers=FOREIGN)).status_code == 404
     # Un oficial sí puede subir y ver
-    assert (await upload(client, headers=COMPLIANCE)).status_code == 201
+    assert (await upload(client, JPEG + b"del oficial", headers=COMPLIANCE)).status_code == 201
 
 
 @pytest.mark.asyncio
@@ -195,3 +195,29 @@ async def test_filename_is_sanitized(client):
     assert "/" not in ev["filename"] and "\\" not in ev["filename"] and "\x00" not in ev["filename"]
     # La ruta en disco se deriva del id, nunca del nombre que mandó el cliente
     assert os.listdir(client.storage / "t1" / "evidence") == [f"{ev['id']}.jpg"]
+
+
+@pytest.mark.asyncio
+async def test_same_file_twice_in_one_task_is_rejected_but_ok_in_another(client):
+    first = (await upload(client, JPEG)).json()
+    again = await upload(client, JPEG)
+    assert again.status_code == 409
+    err = again.json()["error"]
+    assert err["code"] == "DUPLICATE_EVIDENCE" and err["details"]["evidence_id"] == first["id"]
+    # no quedó fila ni archivo de más
+    assert len((await client.get("/api/v1/tasks/task-prog/evidence", headers=OPERATOR)).json()["items"]) == 1
+    assert len(os.listdir(client.storage / "t1" / "evidence")) == 1
+
+
+def test_mojibake_filenames_are_repaired_without_touching_normal_ones():
+    from app.core.text import fix_mojibake
+
+    assert fix_mojibake("Orange Data Mining quÃ© es y cÃ³mo funciona.pdf") == "Orange Data Mining qué es y cómo funciona.pdf"
+    for fine in ["Ñandú.pdf", "Informe café.png", "foto.jpg", "résumé.pdf", ""]:
+        assert fix_mojibake(fine) == fine
+
+
+@pytest.mark.asyncio
+async def test_stored_and_listed_filenames_are_clean(client):
+    ev = (await upload(client, JPEG, name="aviso quÃ© es.jpg")).json()
+    assert ev["filename"] == "aviso qué es.jpg"

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { API_URL, getSession, getToken } from "@/lib/session";
 import { STATUS_LABEL, type Task } from "@/types/tasks";
-import { VERDICT_LABEL, formatSize, type EvidenceItem } from "@/types/evidence";
-import { uploadEvidenceAction, verifyEvidenceAction } from "./actions";
+import { VERDICT_LABEL, VERDICT_STYLE, formatSize, type EvidenceItem } from "@/types/evidence";
+import { reviewEvidenceAction, uploadEvidenceAction, verifyEvidenceAction } from "./actions";
 
 async function api<T>(path: string): Promise<{ status: number; data: T | null }> {
   const token = getToken();
@@ -95,8 +95,9 @@ export default async function EvidenciaPage({
             />
           </label>
           <p className="text-xs text-muted">
-            Al subirla se calcula su huella SHA-256. La evidencia no se puede editar ni reemplazar:
-            una nueva subida crea un registro nuevo.
+            Al subirla se calcula su huella SHA-256 y, si está activa, una revisión con IA te dice
+            si parece completa. La evidencia no se puede editar ni reemplazar: una nueva subida
+            crea un registro nuevo.
           </p>
           <div>
             <button type="submit" className="min-h-11 rounded-md bg-lexi px-5 text-sm font-medium text-white">
@@ -126,14 +127,29 @@ export default async function EvidenciaPage({
           <article key={e.id} className="flex flex-col gap-2 rounded-lg border border-line bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="break-all font-medium">{e.filename}</h3>
-              <span className="rounded bg-[#ECEAE2] px-2 py-0.5 text-xs">
-                {VERDICT_LABEL[e.ai_verdict ?? "NOT_REVIEWED"] ?? e.ai_verdict}
+              <span
+                className={`rounded px-2 py-0.5 text-xs ${VERDICT_STYLE[e.ai_verdict ?? "NOT_REVIEWED"] ?? VERDICT_STYLE.NOT_REVIEWED}`}
+                title="La revisión con IA es una ayuda: no aprueba ni cierra la tarea"
+              >
+                IA: {VERDICT_LABEL[e.ai_verdict ?? "NOT_REVIEWED"] ?? e.ai_verdict}
               </span>
             </div>
             <p className="text-xs text-muted">
               {formatSize(e.size_bytes)} · {formatDateTime(e.created_at)}
               {e.uploaded_by_name ? ` · ${e.uploaded_by_name}` : ""}
             </p>
+            {e.ai_summary && (
+              <div className="rounded-md bg-[#F5F4EF] px-3 py-2 text-sm">
+                <p>{e.ai_summary}</p>
+                {e.ai_issues.length > 0 && (
+                  <ul className="mt-1 list-disc pl-5 text-xs text-muted">
+                    {e.ai_issues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <p className="break-all font-mono text-[11px] text-muted" title="Huella SHA-256 del archivo original">
               SHA-256: {e.sha256}
             </p>
@@ -146,6 +162,13 @@ export default async function EvidenciaPage({
               >
                 Ver archivo
               </a>
+              <form action={reviewEvidenceAction}>
+                <input type="hidden" name="task_id" value={params.id} />
+                <input type="hidden" name="evidence_id" value={e.id} />
+                <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]">
+                  {e.ai_verdict && e.ai_verdict !== "NOT_REVIEWED" ? "Revisar de nuevo con IA" : "Revisar con IA"}
+                </button>
+              </form>
               {isManager && (
                 <form action={verifyEvidenceAction}>
                   <input type="hidden" name="task_id" value={params.id} />

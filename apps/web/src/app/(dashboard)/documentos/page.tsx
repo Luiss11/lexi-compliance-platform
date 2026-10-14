@@ -75,7 +75,7 @@ export default async function DocumentosPage({
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Categoría
+          Tipo de documento
           <select name="category" defaultValue="Ley" className="min-h-11 rounded-md border border-line px-3">
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -84,6 +84,10 @@ export default async function DocumentosPage({
             ))}
           </select>
         </label>
+        <p className="text-xs text-muted sm:col-span-2">
+          Elige bien el tipo: la búsqueda de vacíos solo analiza Ley, Norma oficial, Reglamento y Contrato. Las
+          políticas internas y «Otro» se consultan en el asistente, pero no generan tareas.
+        </p>
         <label className="flex flex-col gap-1 text-sm">
           Título (opcional)
           <input

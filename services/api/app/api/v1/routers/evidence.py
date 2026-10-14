@@ -6,7 +6,7 @@ from app.core.errors import AppError
 from app.core.security import CurrentUser, Role, get_current_user, require_roles
 from app.db.session import get_db
 from app.schemas.evidence import EvidenceList, EvidenceOut, VerifyResult
-from app.services import evidence_service
+from app.services import evidence_review_service, evidence_service
 from app.services.evidence_service import MAX_BYTES
 
 # /tasks/{id}/evidence: se monta bajo /tasks en api/v1/router.py
@@ -28,7 +28,9 @@ async def upload_evidence(
     data = await evidence_file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise AppError(413, "FILE_TOO_LARGE", "La evidencia supera el límite de 10 MB.")
-    return await evidence_service.upload_evidence(db, actor, task_id, data, evidence_file.filename)
+    out = await evidence_service.upload_evidence(db, actor, task_id, data, evidence_file.filename)
+    # Revisión automática con IA (mejor esfuerzo: si falla, la evidencia queda sin revisar)
+    return await evidence_review_service.auto_review(db, actor, out)
 
 
 @tasks_router.get("/{task_id}/evidence", response_model=EvidenceList)
@@ -47,6 +49,16 @@ async def verify_evidence(
     db: AsyncSession = Depends(get_db),
 ) -> VerifyResult:
     return await evidence_service.verify_evidence(db, actor, evidence_id)
+
+
+@router.post("/{evidence_id}/review", response_model=EvidenceOut)
+async def review_evidence(
+    evidence_id: str,
+    actor: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> EvidenceOut:
+    """Revisión con IA a petición (quien puede ver la evidencia puede pedirla)."""
+    return await evidence_review_service.review_evidence(db, actor, evidence_id)
 
 
 @router.get("/{evidence_id}/file")

@@ -301,3 +301,33 @@ async def test_evidence_count_in_list(client):
     items = {i["id"]: i for i in (await client.get("/api/v1/tasks", headers=ADMIN)).json()["items"]}
     assert items[t["id"]]["evidence_count"] == 1
     assert sorted(i["evidence_count"] for i in items.values()) == [0, 1]
+
+
+# ---------- eliminar ----------
+
+async def test_delete_task_rules(client):
+    tid = (await make(client, title="Tarea para borrar"))["id"]
+    assert (await client.delete(f"/api/v1/tasks/{tid}", headers=OPERATOR)).status_code == 403
+    assert (await client.delete(f"/api/v1/tasks/{tid}")).status_code == 401
+    assert (await client.delete(f"/api/v1/tasks/{tid}", headers=FOREIGN_ADMIN)).status_code == 404
+    assert (await client.delete(f"/api/v1/tasks/{tid}", headers=COMPLIANCE)).status_code == 204
+    assert (await client.get(f"/api/v1/tasks/{tid}", headers=ADMIN)).status_code == 404
+    assert (await client.delete(f"/api/v1/tasks/{tid}", headers=ADMIN)).status_code == 404
+
+
+async def test_task_with_evidence_or_closed_cannot_be_deleted(client):
+    t = await make(client, title="Con evidencia")
+    await client.patch(f"/api/v1/tasks/{t['id']}/status", json={"status": "IN_PROGRESS"}, headers=ADMIN)
+    await add_evidence(client, t["id"])
+    r = await client.delete(f"/api/v1/tasks/{t['id']}", headers=ADMIN)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "TASK_HAS_EVIDENCE"
+    assert (await client.get(f"/api/v1/tasks/{t['id']}", headers=ADMIN)).status_code == 200
+
+    done = await make(client, title="Ya cumplida")
+    for status in ("IN_PROGRESS", "IN_REVIEW", "DONE"):
+        if status == "IN_REVIEW":
+            await add_evidence(client, done["id"], uploader="u-op")
+        r = await client.patch(f"/api/v1/tasks/{done['id']}/status", json={"status": status}, headers=COMPLIANCE)
+        assert r.status_code == 200, r.text
+    r = await client.delete(f"/api/v1/tasks/{done['id']}", headers=ADMIN)
+    assert r.status_code == 409 and r.json()["error"]["code"] in ("TASK_CLOSED", "TASK_HAS_EVIDENCE")

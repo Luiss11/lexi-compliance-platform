@@ -124,3 +124,31 @@ model EvidenceFile {
   @@index([sha256])
   @@map("evidence_files")
 }
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+model EvidenceReview {
+  id         String   @id @default(cuid())
+  evidenceId String
+  tenantId   String
+  verdict    String
+  summary    String
+  issues     Json?
+  model      String
+  createdAt  DateTime @default(now())
+
+  @@index([evidenceId])
+  @@map("evidence_reviews")
+}

@@ -99,9 +99,14 @@ export default async function PanelPage() {
           </p>
         </div>
         {isManager && (
-          <Link href="/expediente" className="flex min-h-11 items-center rounded-md bg-lexi px-4 text-sm font-medium text-white">
-            Generar expediente de auditoría
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/vacios" className="flex min-h-11 items-center rounded-md border border-line bg-white px-4 text-sm hover:bg-[#F5F4EF]">
+              Buscar vacíos normativos
+            </Link>
+            <Link href="/expediente" className="flex min-h-11 items-center rounded-md bg-lexi px-4 text-sm font-medium text-white">
+              Generar expediente de auditoría
+            </Link>
+          </div>
         )}
       </header>
 

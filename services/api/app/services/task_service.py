@@ -15,8 +15,9 @@ from uuid import uuid4
 
 from app.core.errors import AppError, forbidden
 from app.core.security import CurrentUser, Role
-from app.models.tables import EvidenceFile, Task, TaskStatus, User
+from app.models.tables import Document, EvidenceFile, Task, TaskStatus, User
 from app.schemas.tasks import TaskCreate, TaskList, TaskOut, TaskStatusChange, TaskUpdate
+from app.services import audit_service
 
 S = TaskStatus
 
@@ -137,8 +138,25 @@ async def get_task(db: AsyncSession, actor: CurrentUser, task_id: str) -> TaskOu
     return _out(task, name, counts.get(task.id, 0))
 
 
-async def create_task(db: AsyncSession, actor: CurrentUser, body: TaskCreate) -> TaskOut:
+async def _check_document(db: AsyncSession, actor: CurrentUser, document_id: str) -> None:
+    ok = (
+        await db.execute(
+            select(Document.id).where(Document.id == document_id, Document.tenant_id == actor.tenant_id)
+        )
+    ).first()
+    if ok is None:
+        raise AppError(
+            400, "INVALID_INPUT", "El documento no pertenece a tu organización.",
+            {"fields": [{"loc": ["document_id"], "msg": "Documento no válido."}]},
+        )
+
+
+async def create_task(
+    db: AsyncSession, actor: CurrentUser, body: TaskCreate, suggested_by_ai: bool = False
+) -> TaskOut:
     assignee_name = None
+    if body.document_id:
+        await _check_document(db, actor, body.document_id)
     if body.assignee_id:
         assignee_name = await _check_assignee(db, actor, body.assignee_id)
 
@@ -156,7 +174,7 @@ async def create_task(db: AsyncSession, actor: CurrentUser, body: TaskCreate) ->
             assignee_id=body.assignee_id,
             document_id=body.document_id,
             citation=body.citation,
-            suggested_by_ai=False,
+            suggested_by_ai=suggested_by_ai,
         )
         db.add(task)
         try:
@@ -167,7 +185,13 @@ async def create_task(db: AsyncSession, actor: CurrentUser, body: TaskCreate) ->
             if attempt == 1:
                 raise AppError(409, "CONFLICT", "No se pudo crear la tarea. Intenta de nuevo.")
     await db.refresh(task)
-    return _out(task, assignee_name)
+    out = _out(task, assignee_name)
+    await audit_service.record(
+        db, actor, audit_service.TASK_CREATED, "TASK", out.id,
+        {"code": out.code, "title": out.title, "priority": out.priority.value,
+         "suggested_by_ai": suggested_by_ai},
+    )
+    return out
 
 
 async def update_task(
@@ -193,7 +217,12 @@ async def update_task(
     await db.commit()
     await db.refresh(task)
     counts = await _evidence_counts(db, [task.id])
-    return _out(task, name, counts.get(task.id, 0))
+    out = _out(task, name, counts.get(task.id, 0))
+    await audit_service.record(
+        db, actor, audit_service.TASK_UPDATED, "TASK", out.id,
+        {"code": out.code, "fields": sorted(body.model_dump(exclude_unset=True))},
+    )
+    return out
 
 
 async def change_status(
@@ -241,10 +270,44 @@ async def change_status(
         if own:
             raise forbidden("No puedes aprobar una tarea con evidencia que subiste tú.")
 
+    previous = task.status
     task.status = target
     await db.commit()
     await db.refresh(task)
-    return _out(task, name, n_evidence)
+    out = _out(task, name, n_evidence)
+    await audit_service.record(
+        db, actor, audit_service.TASK_STATUS_CHANGED, "TASK", out.id,
+        {"code": out.code, "from": previous.value, "to": target.value},
+    )
+    return out
+
+
+async def delete_task(db: AsyncSession, actor: CurrentUser, task_id: str) -> None:
+    """Elimina una tarea que nunca tuvo evidencia ni se cerró.
+
+    Para no romper la cadena de auditoría: una tarea con evidencia (inmutable) o ya cumplida se
+    conserva. Si fue un error, se reabre primero. Cada eliminación queda en la bitácora.
+    """
+    if not _is_manager(actor):
+        raise forbidden()
+    task, _ = await _get_task(db, actor, task_id)
+    if task.status == S.DONE:
+        raise AppError(
+            409, "TASK_CLOSED",
+            "Las tareas cumplidas se conservan para auditoría. Si fue un error, reábrela primero.",
+        )
+    n_evidence = (await _evidence_counts(db, [task.id])).get(task.id, 0)
+    if n_evidence:
+        raise AppError(
+            409, "TASK_HAS_EVIDENCE",
+            "La tarea tiene evidencia sellada y no se puede eliminar: la evidencia es inmutable.",
+        )
+    code, title, tid = task.code, task.title, task.id
+    await db.delete(task)
+    await db.commit()
+    await audit_service.record(
+        db, actor, audit_service.TASK_DELETED, "TASK", tid, {"code": code, "title": title}
+    )
 
 
 async def list_assignees(db: AsyncSession, actor: CurrentUser) -> list[dict]:

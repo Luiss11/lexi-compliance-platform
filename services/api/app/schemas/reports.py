@@ -55,6 +55,8 @@ class DossierEvidence(BaseModel):
     uploaded_by_name: str | None
     uploaded_at: datetime
     integrity: str  # OK | TAMPERED | MISSING
+    ai_verdict: str | None = None  # VALID | INCOMPLETE | INVALID | NOT_REVIEWED
+    ai_summary: str | None = None
 
 
 class DossierTask(BaseModel):
@@ -88,6 +90,15 @@ class DossierSummary(BaseModel):
     overdue: int
     evidence_files: int
     integrity_failures: int
+    ai_flagged: int = 0  # evidencias que la revisión automática marcó como incompletas o no válidas
+
+
+class DossierAudit(BaseModel):
+    at: datetime
+    actor_name: str | None
+    action: str
+    entity_type: str
+    details: dict | None
 
 
 class DossierOut(BaseModel):
@@ -97,4 +108,5 @@ class DossierOut(BaseModel):
     summary: DossierSummary
     documents: list[DossierDocument]
     tasks: list[DossierTask]
+    audit_trail: list[DossierAudit]  # últimas 100 acciones de la bitácora
     seal: str  # SHA-256 del contenido canónico (todo lo anterior)

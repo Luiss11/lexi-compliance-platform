@@ -6,7 +6,8 @@ Las columnas de Prisma están en camelCase, por eso el nombre explícito en mapp
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -120,6 +121,45 @@ class EvidenceFile(Base):
     size_bytes: Mapped[int] = mapped_column("sizeBytes", Integer)
     sha256: Mapped[str] = mapped_column(String)
     ai_verdict: Mapped[str | None] = mapped_column("aiVerdict", String)
+    created_at: Mapped[datetime] = mapped_column(
+        "createdAt", DateTime, server_default=func.now()
+    )
+
+
+_JSON = JSON().with_variant(JSONB(), "postgresql")
+
+
+class AuditLog(Base):
+    """Bitácora de auditoría: quién hizo qué y cuándo. Solo se inserta, nunca se edita.
+
+    Tabla nueva creada por Prisma (modelo AuditLog). Sin relaciones: el actor y la entidad
+    se guardan como ids simples para que la bitácora sobreviva aunque se borre el original.
+    """
+
+    __tablename__ = "audit_logs"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    tenant_id: Mapped[str] = mapped_column("tenantId", String)
+    actor_id: Mapped[str | None] = mapped_column("actorId", String)
+    action: Mapped[str] = mapped_column(String)
+    entity_type: Mapped[str] = mapped_column("entityType", String)
+    entity_id: Mapped[str | None] = mapped_column("entityId", String)
+    details: Mapped[dict | None] = mapped_column(_JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        "createdAt", DateTime, server_default=func.now()
+    )
+
+
+class EvidenceReview(Base):
+    """Cada revisión automática (IA) de una evidencia. La última manda en EvidenceFile.ai_verdict."""
+
+    __tablename__ = "evidence_reviews"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    evidence_id: Mapped[str] = mapped_column("evidenceId", String)
+    tenant_id: Mapped[str] = mapped_column("tenantId", String)
+    verdict: Mapped[str] = mapped_column(String)
+    summary: Mapped[str] = mapped_column(Text)
+    issues: Mapped[list | None] = mapped_column(_JSON)
+    model: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(
         "createdAt", DateTime, server_default=func.now()
     )

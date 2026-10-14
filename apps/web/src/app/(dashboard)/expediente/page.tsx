@@ -3,6 +3,8 @@ import { API_URL, getToken } from "@/lib/session";
 import { STATUS_LABEL, type TaskStatus } from "@/types/tasks";
 import { formatSize } from "@/types/evidence";
 import type { Dossier, Integrity } from "@/types/report";
+import { ACTION_LABEL, describe } from "@/types/audit";
+import { VERDICT_LABEL, VERDICT_STYLE } from "@/types/evidence";
 import { PrintButton } from "./PrintButton";
 
 async function loadDossier(): Promise<Dossier | null> {
@@ -27,6 +29,9 @@ function utc(iso: string) {
 }
 function dateTime(iso: string) {
   return utc(iso).toLocaleString("es-MX", { dateStyle: "long", timeStyle: "short", timeZone: TZ });
+}
+function dateTime2(iso: string) {
+  return utc(iso).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short", timeZone: TZ });
 }
 function dateShort(iso: string) {
   return utc(iso).toLocaleDateString("es-MX", { dateStyle: "short", timeZone: TZ });
@@ -57,7 +62,7 @@ export default async function ExpedientePage() {
   const withoutEvidence = d.tasks.filter((t) => t.status === "DONE" && t.evidence.length === 0);
 
   return (
-    <article className="mx-auto flex max-w-4xl flex-col gap-6 print:max-w-none print:gap-4 print:text-[11px]">
+    <article className="mx-auto flex max-w-4xl flex-col gap-6 [print-color-adjust:exact] print:max-w-none print:gap-4 print:text-[11px]">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <p className="text-sm text-muted">
           Foto del estado de cumplimiento al momento de abrir esta página. Cada evidencia se
@@ -116,11 +121,18 @@ export default async function ExpedientePage() {
         </section>
       )}
 
+      {d.summary.ai_flagged > 0 && (
+        <section className="rounded-lg border border-[#EAD7A5] bg-[#FFF3D6] px-4 py-3 text-sm text-[#7A5600] break-inside-avoid">
+          <strong>Observación:</strong> la revisión automática marcó {d.summary.ai_flagged} evidencia(s) como
+          incompleta(s) o no válida(s). Revísalas antes de una auditoría.
+        </section>
+      )}
+
       <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-xl font-semibold">Obligaciones y evidencias</h2>
+        <h2 className="font-serif text-xl font-semibold break-after-avoid">Obligaciones y evidencias</h2>
         {d.tasks.length === 0 && <p className="text-sm text-muted">No hay obligaciones registradas.</p>}
         {d.tasks.map((t) => (
-          <div key={t.code} className="rounded-lg border border-line bg-white p-4 break-inside-avoid">
+          <div key={t.code} className="rounded-lg border border-line bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-mono text-xs text-muted">{t.code}</p>
@@ -157,6 +169,14 @@ export default async function ExpedientePage() {
                       {e.uploaded_by_name ? ` · ${e.uploaded_by_name}` : ""}
                     </p>
                     <p className="mt-0.5 break-all font-mono text-[10px] text-muted">SHA-256: {e.sha256}</p>
+                    {e.ai_verdict && e.ai_verdict !== "NOT_REVIEWED" && (
+                      <p className="mt-1 text-xs">
+                        <span className={`rounded px-1.5 py-0.5 ${VERDICT_STYLE[e.ai_verdict] ?? ""}`}>
+                          Revisión IA: {VERDICT_LABEL[e.ai_verdict] ?? e.ai_verdict}
+                        </span>
+                        {e.ai_summary ? <span className="text-muted"> {e.ai_summary}</span> : null}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -166,7 +186,7 @@ export default async function ExpedientePage() {
       </section>
 
       <section className="flex flex-col gap-3 break-inside-avoid">
-        <h2 className="font-serif text-xl font-semibold">Base normativa</h2>
+        <h2 className="font-serif text-xl font-semibold break-after-avoid">Base normativa</h2>
         {d.documents.length === 0 ? (
           <p className="text-sm text-muted">No hay documentos normativos cargados.</p>
         ) : (
@@ -179,6 +199,27 @@ export default async function ExpedientePage() {
                   {doc.pages ? ` · ${doc.pages} pág.` : ""} · {dateShort(doc.uploaded_at)}
                 </span>
                 <p className="break-all font-mono text-[10px] text-muted">SHA-256: {doc.sha256}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-serif text-xl font-semibold break-after-avoid">Bitácora reciente</h2>
+        {d.audit_trail.length === 0 ? (
+          <p className="text-sm text-muted">Sin eventos registrados.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-line rounded-lg border border-line bg-white text-xs">
+            {d.audit_trail.map((a, i) => (
+              <li key={`${a.at}-${i}`} className="flex flex-wrap justify-between gap-x-4 px-3 py-1.5 break-inside-avoid">
+                <span>
+                  <span className="font-medium">{ACTION_LABEL[a.action] ?? a.action}</span>{" "}
+                  <span className="text-muted">{describe(a)}</span>
+                </span>
+                <span className="text-muted">
+                  {a.actor_name ?? "Sistema"} · {dateTime2(a.at)}
+                </span>
               </li>
             ))}
           </ul>

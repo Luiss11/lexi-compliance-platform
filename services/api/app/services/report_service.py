@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, Role
+from app.core.text import fix_mojibake
 from app.models.tables import (
     Document,
     DocumentStatus,
@@ -31,6 +32,7 @@ from app.models.tables import (
 from app.schemas.reports import (
     Alert,
     DashboardOut,
+    DossierAudit,
     DossierDocument,
     DossierEvidence,
     DossierOut,
@@ -39,7 +41,7 @@ from app.schemas.reports import (
     StatusCounts,
     Upcoming,
 )
-from app.services import evidence_service
+from app.services import audit_service, evidence_review_service, evidence_service
 from app.services.hashing import sha256_bytes
 
 S = TaskStatus
@@ -169,6 +171,29 @@ async def dashboard(db: AsyncSession, actor: CurrentUser) -> DashboardOut:
                 message=f"{t.code} no tiene responsable asignado.",
             ))
 
+    # Evidencias que la revisión automática observó (solo tareas aún abiertas)
+    open_ids = {t.id: t for t, _, _ in rows if t.status != S.DONE}
+    if open_ids:
+        flagged = (
+            await db.execute(
+                select(EvidenceFile.task_id, EvidenceFile.filename, EvidenceFile.ai_verdict)
+                .where(
+                    EvidenceFile.task_id.in_(list(open_ids)),
+                    EvidenceFile.ai_verdict.in_(("INCOMPLETE", "INVALID")),
+                )
+                .order_by(EvidenceFile.created_at)
+            )
+        ).all()
+        for tid, fname, verdict in flagged:
+            t = open_ids[tid]
+            alerts.append(Alert(
+                kind="AI_FLAGGED", severity="medium", task_id=t.id, task_code=t.code,
+                message=(
+                    f"{t.code}: la revisión automática marcó «{fname}» como "
+                    f"{'incompleta' if verdict == 'INCOMPLETE' else 'no válida'}."
+                ),
+            ))
+
     documents_total = documents_indexed = None
     if is_manager:
         docs = (
@@ -218,6 +243,10 @@ def seal_of(payload: dict) -> str:
 async def dossier(db: AsyncSession, actor: CurrentUser) -> DossierOut:
     """Expediente de auditoría de toda la organización (solo ADMIN y COMPLIANCE)."""
     now = _now()
+    # Lo que puede fallar por tablas aún no creadas se consulta PRIMERO, antes de cargar
+    # objetos ORM: un rollback los expiraría.
+    reviews = await evidence_review_service.latest_reviews(db, tenant_id=actor.tenant_id)
+    audit_entries = await audit_service.recent(db, actor.tenant_id, limit=100)
     tenant_name = (
         await db.execute(select(Tenant.name).where(Tenant.id == actor.tenant_id))
     ).scalar_one_or_none() or ""
@@ -243,15 +272,18 @@ async def dossier(db: AsyncSession, actor: CurrentUser) -> DossierOut:
     ).all()
     by_task: dict[str, list[DossierEvidence]] = {}
     failures = 0
+    ai_flagged = sum(1 for ev, _ in ev_rows if ev.ai_verdict in ("INCOMPLETE", "INVALID"))
     for ev, uploader in ev_rows:
         state, _ = await evidence_service.check_integrity(actor.tenant_id, ev)
         if state != "OK":
             failures += 1
         by_task.setdefault(ev.task_id, []).append(
             DossierEvidence(
-                id=ev.id, filename=ev.filename, mime_type=ev.mime_type, size_bytes=ev.size_bytes,
+                id=ev.id, filename=fix_mojibake(ev.filename), mime_type=ev.mime_type, size_bytes=ev.size_bytes,
                 sha256=ev.sha256, uploaded_by_name=uploader, uploaded_at=ev.created_at,
                 integrity=state,
+                ai_verdict=ev.ai_verdict,
+                ai_summary=reviews[ev.id].summary if ev.id in reviews else None,
             )
         )
 
@@ -290,11 +322,23 @@ async def dossier(db: AsyncSession, actor: CurrentUser) -> DossierOut:
         overdue=sum(1 for t, _, _ in rows if _is_overdue(t, now)),
         evidence_files=len(ev_rows),
         integrity_failures=failures,
+        ai_flagged=ai_flagged,
     )
 
     out = DossierOut(
         tenant_name=tenant_name, generated_at=now, generated_by=generated_by,
-        summary=summary, documents=documents, tasks=tasks, seal="",
+        summary=summary, documents=documents, tasks=tasks,
+        audit_trail=[
+            DossierAudit(at=a.created_at, actor_name=a.actor_name, action=a.action,
+                         entity_type=a.entity_type, details=a.details)
+            for a in audit_entries
+        ],
+        seal="",
     )
     out.seal = seal_of(out.model_dump(mode="json", exclude={"seal"}))
+    await audit_service.record(
+        db, actor, audit_service.DOSSIER_GENERATED, "DOSSIER", None,
+        {"seal": out.seal, "tasks": summary.total_tasks, "evidence_files": summary.evidence_files,
+         "integrity_failures": summary.integrity_failures},
+    )
     return out

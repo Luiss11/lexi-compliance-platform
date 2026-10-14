@@ -1,7 +1,7 @@
 """Esquemas de evidencias con sello SHA-256 (SDD §5.4, RF-TSK-02)."""
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EvidenceOut(BaseModel):
@@ -15,6 +15,8 @@ class EvidenceOut(BaseModel):
     sha256: str
     ai_verdict: str | None
     uploaded_by_name: str | None = None
+    ai_summary: str | None = None
+    ai_issues: list[str] = Field(default_factory=list)
     created_at: datetime
 
 

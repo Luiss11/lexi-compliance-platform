@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, Role, get_current_user, require_roles
@@ -66,3 +66,13 @@ async def change_status(
     db: AsyncSession = Depends(get_db),
 ) -> TaskOut:
     return await task_service.change_status(db, actor, task_id, body)
+
+
+@router.delete("/{task_id}", status_code=204)
+async def delete_task(
+    task_id: str,
+    actor: CurrentUser = Depends(managers),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    await task_service.delete_task(db, actor, task_id)
+    return Response(status_code=204)

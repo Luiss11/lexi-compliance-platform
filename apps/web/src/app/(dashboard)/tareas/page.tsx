@@ -9,7 +9,7 @@ import {
   type Assignee,
   type Task,
 } from "@/types/tasks";
-import { createTaskAction, moveTaskAction } from "./actions";
+import { createTaskAction, deleteTaskAction, moveTaskAction } from "./actions";
 
 async function api<T>(path: string): Promise<T | null> {
   const token = getToken();
@@ -141,6 +141,9 @@ export default async function TareasPage({
                   </div>
                   <h3 className="text-sm font-medium">{t.title}</h3>
                   {t.citation && <p className="text-xs text-muted">{t.citation}</p>}
+                  {t.suggested_by_ai && (
+                    <span className="w-fit rounded bg-[#EEF0F5] px-2 py-0.5 text-[11px] text-[#3F4B66]">Sugerida por IA</span>
+                  )}
                   <div className="flex flex-wrap gap-x-3 text-xs text-muted">
                     <span>{t.assignee_name ?? "Sin asignar"}</span>
                     {t.due_date && (
@@ -174,6 +177,20 @@ export default async function TareasPage({
                         </form>
                       ))}
                   </div>
+                  {isManager && t.status !== "DONE" && t.evidence_count === 0 && (
+                    <details className="text-xs">
+                      <summary className="flex min-h-11 cursor-pointer items-center text-muted underline">Eliminar</summary>
+                      <form action={deleteTaskAction} className="flex flex-col gap-2 rounded-md bg-[#FBE9E7] p-3">
+                        <input type="hidden" name="id" value={t.id} />
+                        <p className="text-[#9A2D20]">
+                          Se elimina {t.code} y queda registrado en Auditoría. No se puede deshacer.
+                        </p>
+                        <button type="submit" className="min-h-11 rounded-md bg-[#9A2D20] px-3 font-medium text-white">
+                          Sí, eliminar
+                        </button>
+                      </form>
+                    </details>
+                  )}
                 </article>
               ))}
             </div>

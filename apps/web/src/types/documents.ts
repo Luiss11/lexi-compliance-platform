@@ -12,7 +12,10 @@ export interface DocumentItem {
   created_at: string;
 }
 
-export const CATEGORIES = ["Ley", "Norma oficial", "Política interna", "Contrato", "Otro"];
+export const CATEGORIES = ["Ley", "Norma oficial", "Reglamento", "Contrato", "Política interna", "Otro"];
+
+// El agente de vacíos solo analiza estos tipos: son obligaciones que vienen de fuera de la empresa
+export const EXTERNAL_CATEGORIES = ["Ley", "Norma oficial", "Reglamento", "Contrato"];
 
 export const STATUS_INFO: Record<DocumentStatus, { label: string; hint: string; style: string }> = {
   UPLOADED: {

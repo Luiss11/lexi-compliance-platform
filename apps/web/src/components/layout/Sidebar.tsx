@@ -10,8 +10,10 @@ const NAV = [
   { href: "/asistente", label: "Asistente legal" },
   { href: "/documentos", label: "Documentos" },
   { href: "/tareas", label: "Tareas" },
+  { href: "/vacios", label: "Vacíos normativos" },
   { href: "/evidencias", label: "Evidencias" },
   { href: "/expediente", label: "Expediente" },
+  { href: "/auditoria", label: "Auditoría" },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {

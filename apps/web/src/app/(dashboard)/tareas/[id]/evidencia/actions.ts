@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { API_URL, getToken } from "@/lib/session";
+import { VERDICT_LABEL } from "@/types/evidence";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -49,7 +50,11 @@ export async function uploadEvidenceAction(formData: FormData): Promise<void> {
   const ev = await res.json();
   revalidatePath(`/tareas/${taskId}/evidencia`);
   revalidatePath("/tareas");
-  back(taskId, { ok: `Evidencia sellada. Huella SHA-256: ${ev.sha256}` });
+  const review =
+    ev.ai_verdict && ev.ai_verdict !== "NOT_REVIEWED"
+      ? ` Revisión con IA: ${VERDICT_LABEL[ev.ai_verdict] ?? ev.ai_verdict}${ev.ai_summary ? ` — ${ev.ai_summary}` : ""}`
+      : "";
+  back(taskId, { ok: `Evidencia sellada. Huella SHA-256: ${ev.sha256}.${review}` });
 }
 
 export async function verifyEvidenceAction(formData: FormData): Promise<void> {
@@ -66,4 +71,19 @@ export async function verifyEvidenceAction(formData: FormData): Promise<void> {
     back(taskId, { error: "La evidencia fue alterada después de subirse: la huella ya no coincide." });
   }
   back(taskId, { ok: "Integridad verificada: la huella del archivo coincide con la original." });
+}
+
+export async function reviewEvidenceAction(formData: FormData): Promise<void> {
+  const taskId = String(formData.get("task_id") ?? "");
+  const evidenceId = String(formData.get("evidence_id") ?? "");
+  if (!taskId || !evidenceId) redirect("/tareas");
+
+  const res = await call(taskId, `/evidence/${encodeURIComponent(evidenceId)}/review`, { method: "POST" });
+  if (res.status === 401) redirect("/logout");
+  if (!res.ok) back(taskId, { error: await errorMessage(res) });
+
+  const ev = await res.json();
+  revalidatePath(`/tareas/${taskId}/evidencia`);
+  revalidatePath("/panel");
+  back(taskId, { ok: `Revisión con IA: ${VERDICT_LABEL[ev.ai_verdict] ?? ev.ai_verdict}.` });
 }

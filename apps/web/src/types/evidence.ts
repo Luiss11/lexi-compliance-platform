@@ -6,6 +6,8 @@ export interface EvidenceItem {
   size_bytes: number;
   sha256: string;
   ai_verdict: string | null;
+  ai_summary: string | null;
+  ai_issues: string[];
   uploaded_by_name: string | null;
   created_at: string;
 }
@@ -15,6 +17,14 @@ export const VERDICT_LABEL: Record<string, string> = {
   VALID: "Válida",
   INCOMPLETE: "Incompleta",
   INVALID: "No válida",
+};
+
+// Colores del veredicto de la IA (asesora, no decide)
+export const VERDICT_STYLE: Record<string, string> = {
+  NOT_REVIEWED: "bg-[#ECEAE2] text-[#4B4F58]",
+  VALID: "bg-[#E6F1EF] text-[#1F6F5F]",
+  INCOMPLETE: "bg-[#FFF3D6] text-[#7A5600]",
+  INVALID: "bg-[#FBE9E7] text-[#9A2D20]",
 };
 
 export function formatSize(bytes: number): string {

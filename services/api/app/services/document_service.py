@@ -20,8 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import CurrentUser
+from app.core.text import fix_mojibake
 from app.models.tables import Document, DocumentStatus, User
 from app.schemas.documents import DocumentList, DocumentOut
+from app.services import audit_service
 from app.services.hashing import sha256_bytes
 
 log = logging.getLogger(__name__)
@@ -79,7 +81,7 @@ def _remove_file(path: str) -> None:
 def _title_from(filename: str | None, title: str | None) -> str:
     if title and title.strip():
         return title.strip()[:200]
-    name = os.path.basename(filename or "documento.pdf")
+    name = os.path.basename(fix_mojibake(filename or "documento.pdf"))
     stem = name[:-4] if name.lower().endswith(".pdf") else name
     return (stem.replace("_", " ").strip() or "Documento")[:200]
 
@@ -204,7 +206,13 @@ async def upload_document(
     await db.refresh(doc)
 
     name = (await db.execute(select(User.name).where(User.id == actor.id))).scalar_one_or_none()
-    return _out(doc, name)
+    out = _out(doc, name)
+    await audit_service.record(
+        db, actor, audit_service.DOCUMENT_UPLOADED, "DOCUMENT", out.id,
+        {"title": out.title, "category": out.category, "sha256": digest, "status": out.status.value
+         if hasattr(out.status, "value") else str(out.status)},
+    )
+    return out
 
 
 async def reindex_document(db: AsyncSession, actor: CurrentUser, doc_id: str) -> DocumentOut:
@@ -226,4 +234,8 @@ async def reindex_document(db: AsyncSession, actor: CurrentUser, doc_id: str) ->
         )
 
     await _run_indexing(db, doc)
-    return _out(doc, name)
+    out = _out(doc, name)
+    await audit_service.record(
+        db, actor, audit_service.DOCUMENT_REINDEXED, "DOCUMENT", out.id, {"title": out.title}
+    )
+    return out

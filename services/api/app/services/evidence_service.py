@@ -21,9 +21,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import CurrentUser, Role
+from app.core.text import fix_mojibake
 from app.models.tables import EvidenceFile, Task, TaskStatus, User
 from app.schemas.evidence import EvidenceList, EvidenceOut, VerifyResult
-from app.services import task_service
+from app.services import audit_service, task_service
 from app.services.hashing import sha256_bytes
 
 log = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ def _path(tenant_id: str, evidence_id: str, mime: str) -> str:
 
 
 def _clean_name(filename: str | None, ext: str) -> str:
-    name = os.path.basename((filename or "").replace("\\", "/"))
+    name = os.path.basename(fix_mojibake(filename or "").replace("\\", "/"))
     name = re.sub(r"[\x00-\x1f\x7f]", "", name).strip()[:200]
     return name or f"evidencia{ext}"
 
@@ -81,8 +82,13 @@ def _remove(path: str) -> None:
 
 def _out(ev: EvidenceFile, uploader: str | None) -> EvidenceOut:
     out = EvidenceOut.model_validate(ev)
+    out.filename = fix_mojibake(out.filename)  # corrige también las subidas anteriores al arreglo
     out.uploaded_by_name = uploader
     return out
+
+
+async def uploader_name(db: AsyncSession, user_id: str) -> str | None:
+    return (await db.execute(select(User.name).where(User.id == user_id))).scalar_one_or_none()
 
 
 async def _load(db: AsyncSession, actor: CurrentUser, evidence_id: str) -> tuple[EvidenceFile, Task]:
@@ -118,6 +124,17 @@ async def upload_evidence(
     mime, ext = kind
 
     digest = sha256_bytes(data)  # sobre los bytes recibidos, antes de guardar
+    duplicate = (
+        await db.execute(
+            select(EvidenceFile.id).where(EvidenceFile.task_id == task.id, EvidenceFile.sha256 == digest)
+        )
+    ).first()
+    if duplicate:
+        raise AppError(
+            409, "DUPLICATE_EVIDENCE",
+            "Este archivo ya está en la evidencia de esta tarea (misma huella SHA-256).",
+            {"evidence_id": duplicate.id},
+        )
     evidence_id = str(uuid4())
     path = _path(actor.tenant_id, evidence_id, mime)
     await asyncio.to_thread(_write_new, path, data)
@@ -142,10 +159,18 @@ async def upload_evidence(
     await db.refresh(ev)
 
     name = (await db.execute(select(User.name).where(User.id == actor.id))).scalar_one_or_none()
-    return _out(ev, name)
+    out = _out(ev, name)
+    await audit_service.record(
+        db, actor, audit_service.EVIDENCE_UPLOADED, "EVIDENCE", out.id,
+        {"task_code": task.code, "filename": out.filename, "sha256": out.sha256,
+         "size_bytes": out.size_bytes},
+    )
+    return out
 
 
 async def list_evidence(db: AsyncSession, actor: CurrentUser, task_id: str) -> EvidenceList:
+    from app.services import evidence_review_service  # import tardío: evita ciclo
+
     task = await task_service.load_task(db, actor, task_id)
     rows = (
         await db.execute(
@@ -155,7 +180,11 @@ async def list_evidence(db: AsyncSession, actor: CurrentUser, task_id: str) -> E
             .order_by(EvidenceFile.created_at, EvidenceFile.id)
         )
     ).all()
-    return EvidenceList(items=[_out(ev, name) for ev, name in rows])
+    # Primero se arman las salidas: la consulta de revisiones puede hacer rollback si la
+    # tabla aún no existe, y eso expira los objetos ORM ya cargados.
+    items = [_out(ev, name) for ev, name in rows]
+    reviews = await evidence_review_service.latest_reviews(db, [i.id for i in items])
+    return EvidenceList(items=[evidence_review_service.apply_review(i, reviews.get(i.id)) for i in items])
 
 
 async def check_integrity(tenant_id: str, ev: EvidenceFile) -> tuple[str, str | None]:
@@ -178,13 +207,20 @@ async def verify_evidence(db: AsyncSession, actor: CurrentUser, evidence_id: str
         reason = "La huella del archivo ya no coincide."
 
     ok = state == "OK"
-    if not ok:
-        # TODO(Luis): escribir EVIDENCE_TAMPERED en audit_logs cuando exista AuditService
-        log.warning("EVIDENCE_TAMPERED evidence=%s task=%s tenant=%s", ev.id, task.id, task.tenant_id)
-    return VerifyResult(
+    result = VerifyResult(
         evidence_id=ev.id, ok=ok, tampered=not ok, stored_sha256=ev.sha256,
         computed_sha256=computed, reason=reason,
     )
+    details = {"task_code": task.code, "filename": ev.filename, "state": state}
+    if not ok:
+        log.warning("EVIDENCE_TAMPERED evidence=%s task=%s tenant=%s", ev.id, task.id, task.tenant_id)
+        await audit_service.record(
+            db, actor, audit_service.EVIDENCE_TAMPERED, "EVIDENCE", ev.id,
+            {**details, "stored_sha256": ev.sha256, "computed_sha256": computed},
+        )
+    else:
+        await audit_service.record(db, actor, audit_service.EVIDENCE_VERIFIED, "EVIDENCE", ev.id, details)
+    return result
 
 
 async def get_file(db: AsyncSession, actor: CurrentUser, evidence_id: str) -> tuple[str, str, str]:
