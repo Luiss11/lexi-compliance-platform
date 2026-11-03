@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import limits
 from app.core.errors import AppError
 from app.core.security import CurrentUser, Role, require_roles
 from app.db.session import get_db
@@ -28,6 +29,7 @@ async def upload_document(
     actor: CurrentUser = Depends(managers),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentOut:
+    limits.consume_ai(actor)  # H-04: subir un PDF genera embeddings (gasto de IA)
     # Se lee un byte de más para detectar archivos que exceden el límite sin cargarlos enteros
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -46,4 +48,5 @@ async def get_document(
 async def reindex_document(
     doc_id: str, actor: CurrentUser = Depends(managers), db: AsyncSession = Depends(get_db)
 ) -> DocumentOut:
+    limits.consume_ai(actor)  # H-04
     return await document_service.reindex_document(db, actor, doc_id)

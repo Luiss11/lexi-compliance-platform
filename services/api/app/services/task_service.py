@@ -6,6 +6,7 @@ Reglas:
 - OPERATOR solo ve y mueve las tareas que tiene asignadas, y no puede marcarlas DONE:
   la tarea termina en IN_REVIEW y el oficial de cumplimiento la cierra.
 """
+import re
 from datetime import UTC, date, datetime
 
 from sqlalchemy import func, select
@@ -102,11 +103,18 @@ async def _check_assignee(db: AsyncSession, actor: CurrentUser, assignee_id: str
     return name
 
 
+_CODE_RE = re.compile(r"^TSK-(\d+)$")
+
+
 async def _next_code(db: AsyncSession, tenant_id: str) -> str:
-    total = (
-        await db.execute(select(func.count()).select_from(Task).where(Task.tenant_id == tenant_id))
-    ).scalar_one()
-    return f"TSK-{total + 1:03d}"
+    """Siguiente código libre de la organización.
+
+    Se toma el mayor número existente y no el conteo de tareas: al borrar una tarea intermedia,
+    contar repetiría un código que ya existe (hallazgo H-05).
+    """
+    codes = (await db.execute(select(Task.code).where(Task.tenant_id == tenant_id))).scalars().all()
+    numbers = [int(m.group(1)) for c in codes if (m := _CODE_RE.match(c))]
+    return f"TSK-{max(numbers, default=0) + 1:03d}"
 
 
 async def list_tasks(

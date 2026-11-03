@@ -1,15 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
-from app.core.config import settings
+from app.core.config import check_jwt_secret, settings
 from app.core.errors import register_exception_handlers
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # La API no arranca con un JWT_SECRET de ejemplo o muy corto (hallazgo H-01)
+    check_jwt_secret()
+    yield
+
 
 app = FastAPI(
     title="Lexi Compliance API",
     version="1.0.0",
     description="Gateway async: auth RBAC, tareas, evidencias SHA-256, RAG y Agente Supervisor.",
     docs_url="/docs",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

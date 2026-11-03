@@ -11,8 +11,16 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 class AppError(Exception):
-    def __init__(self, status_code: int, code: str, message: str, details: dict | None = None):
+    def __init__(
+        self,
+        status_code: int,
+        code: str,
+        message: str,
+        details: dict | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         super().__init__(message)
+        self.headers = headers
         self.status_code = status_code
         self.code = code
         self.message = message
@@ -27,17 +35,24 @@ def forbidden(message: str = "No tienes permiso para esta acción.") -> AppError
     return AppError(403, "FORBIDDEN", message)
 
 
-def _envelope(status_code: int, code: str, message: str, details: dict | None = None):
+def _envelope(
+    status_code: int,
+    code: str,
+    message: str,
+    details: dict | None = None,
+    headers: dict[str, str] | None = None,
+):
     return JSONResponse(
         status_code=status_code,
         content={"error": {"code": code, "message": message, "details": details or {}}},
+        headers=headers,
     )
 
 
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(_: Request, exc: AppError):
-        return _envelope(exc.status_code, exc.code, exc.message, exc.details)
+        return _envelope(exc.status_code, exc.code, exc.message, exc.details, exc.headers)
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation(_: Request, exc: RequestValidationError):

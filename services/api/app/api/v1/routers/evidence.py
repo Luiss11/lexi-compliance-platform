@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import limits
 from app.core.errors import AppError
 from app.core.security import CurrentUser, Role, get_current_user, require_roles
 from app.db.session import get_db
@@ -29,7 +30,10 @@ async def upload_evidence(
     if len(data) > MAX_BYTES:
         raise AppError(413, "FILE_TOO_LARGE", "La evidencia supera el límite de 10 MB.")
     out = await evidence_service.upload_evidence(db, actor, task_id, data, evidence_file.filename)
-    # Revisión automática con IA (mejor esfuerzo: si falla, la evidencia queda sin revisar)
+    # Revisión automática con IA (mejor esfuerzo: si falla o se agotó el tope de IA, la
+    # evidencia queda guardada sin revisar y se puede pedir la revisión después)
+    if evidence_review_service.configured() and not limits.try_consume_ai(actor):
+        return out
     return await evidence_review_service.auto_review(db, actor, out)
 
 
@@ -58,6 +62,7 @@ async def review_evidence(
     db: AsyncSession = Depends(get_db),
 ) -> EvidenceOut:
     """Revisión con IA a petición (quien puede ver la evidencia puede pedirla)."""
+    limits.consume_ai(actor)  # H-04
     return await evidence_review_service.review_evidence(db, actor, evidence_id)
 
 

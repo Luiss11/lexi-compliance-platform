@@ -2,6 +2,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import limits
 from app.core.config import settings
 from app.core.errors import AppError, unauthenticated
 from app.core.security import (
@@ -23,7 +24,12 @@ def _tenant_out(tenant: Tenant) -> TenantOut:
     return TenantOut(id=tenant.id, name=tenant.name, slug=tenant.slug, sector=tenant.sector)
 
 
-async def login(db: AsyncSession, tenant_slug: str, email: str, password: str) -> LoginResponse:
+async def login(
+    db: AsyncSession, tenant_slug: str, email: str, password: str, ip: str | None = None
+) -> LoginResponse:
+    # H-03: si la cuenta o la IP acumularon demasiados fallos, se responde 429 sin verificar nada
+    limits.check_login_allowed(tenant_slug, email, ip)
+
     result = await db.execute(
         select(User, Tenant)
         .join(Tenant, User.tenant_id == Tenant.id)
@@ -34,12 +40,15 @@ async def login(db: AsyncSession, tenant_slug: str, email: str, password: str) -
     if row is None:
         # Misma duración que un login real: no revela si el correo o la organización existen
         verify_password(password, DUMMY_HASH)
+        limits.register_login_failure(tenant_slug, email, ip)
         raise AppError(401, "INVALID_CREDENTIALS", "Correo o contraseña incorrectos.")
 
     user, _tenant = row
     if not verify_password(password, user.password_hash):
+        limits.register_login_failure(tenant_slug, email, ip)
         raise AppError(401, "INVALID_CREDENTIALS", "Correo o contraseña incorrectos.")
 
+    limits.register_login_success(tenant_slug, email)
     token = create_access_token(user.id, user.tenant_id, Role(user.role))
     return LoginResponse(
         access_token=token,

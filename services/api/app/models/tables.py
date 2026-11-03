@@ -6,7 +6,18 @@ Las columnas de Prisma están en camelCase, por eso el nombre explícito en mapp
 import enum
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -52,6 +63,8 @@ class Tenant(Base):
 
 class User(Base):
     __tablename__ = "users"
+    # Igual que @@unique([tenantId, email]) de Prisma: la base de pruebas debe reflejarlo (H-06)
+    __table_args__ = (UniqueConstraint("tenantId", "email"),)
     id: Mapped[str] = mapped_column(String, primary_key=True)
     tenant_id: Mapped[str] = mapped_column("tenantId", ForeignKey("tenants.id"))
     name: Mapped[str] = mapped_column(String)
@@ -83,6 +96,8 @@ class Document(Base):
 
 class Task(Base):
     __tablename__ = "tasks"
+    # Igual que @@unique([tenantId, code]) de Prisma: la base de pruebas debe reflejarlo (H-06)
+    __table_args__ = (UniqueConstraint("tenantId", "code"),)
     id: Mapped[str] = mapped_column(String, primary_key=True)
     code: Mapped[str] = mapped_column(String)
     tenant_id: Mapped[str] = mapped_column("tenantId", ForeignKey("tenants.id"))

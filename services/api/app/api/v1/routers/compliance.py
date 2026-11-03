@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import limits
 from app.core.security import CurrentUser, Role, require_roles
 from app.db.session import get_db
 from app.schemas.gaps import GapAccept, GapAnalysis, GapDismiss, GapDismissed
@@ -18,6 +19,7 @@ async def analyze_gaps(
     db: AsyncSession = Depends(get_db),
 ) -> GapAnalysis:
     """Propone tareas para obligaciones de la normativa que aún no tienen tarea. No crea nada."""
+    limits.consume_ai(actor)  # H-04: tope de uso de IA
     return await gap_service.analyze(db, actor)
 
 
