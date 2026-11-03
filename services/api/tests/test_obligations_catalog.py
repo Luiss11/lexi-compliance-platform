@@ -79,3 +79,12 @@ def test_personal_data_obligations_are_verified():
     assert len(data) >= 6
     assert all(o.estado_verificacion == "verificado" for o in data)
     assert all(o.cita.startswith(("Art.", "Arts.")) for o in data)
+
+
+def test_sector_is_recognized_from_free_text():
+    for text in ("clinica", "Clínica dental Sonrisa", "Consultorio médico", "odontología"):
+        assert oc.normalize_sector(text) == "clinica", text
+    for text in ("retail", "Comercio al por menor", "Tienda de abarrotes"):
+        assert oc.normalize_sector(text) == "comercio", text
+    assert oc.normalize_sector("minería") is None
+    assert oc.normalize_sector("") is None

@@ -5,8 +5,9 @@ from app.core import limits
 from app.core.security import CurrentUser, Role, require_roles
 from app.db.session import get_db
 from app.schemas.gaps import GapAccept, GapAnalysis, GapDismiss, GapDismissed
+from app.schemas.obligations import ObligationList, ObligationLoad, ObligationLoadResult
 from app.schemas.tasks import TaskList
-from app.services import gap_service
+from app.services import gap_service, obligations_service
 
 router = APIRouter()
 
@@ -41,3 +42,22 @@ async def dismiss_gaps(
 ) -> GapDismissed:
     """Marca propuestas como no aplicables: no vuelven a salir."""
     return GapDismissed(dismissed=await gap_service.dismiss(db, actor, body))
+
+
+@router.get("/obligations", response_model=ObligationList)
+async def list_obligations(
+    actor: CurrentUser = Depends(managers),
+    db: AsyncSession = Depends(get_db),
+) -> ObligationList:
+    """Catálogo de obligaciones del sector de la organización (más las comunes a todos)."""
+    return await obligations_service.list_for_tenant(db, actor)
+
+
+@router.post("/obligations/load", response_model=ObligationLoadResult, status_code=201)
+async def load_obligations(
+    body: ObligationLoad,
+    actor: CurrentUser = Depends(managers),
+    db: AsyncSession = Depends(get_db),
+) -> ObligationLoadResult:
+    """Crea como tareas las obligaciones elegidas; las ya cargadas no se repiten. No usa IA."""
+    return await obligations_service.load(db, actor, body)

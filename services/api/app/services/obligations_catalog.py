@@ -5,6 +5,7 @@ artículo, y si su texto se leyó en fuente oficial (verificado), en un sitio no
 o si todavía falta (pendiente). No es asesoría legal.
 """
 import json
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -13,8 +14,12 @@ from pydantic import BaseModel
 
 DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "obligations.json"
 
-# El sector del tenant puede llegar con otro nombre (el tenant demo de comercio usa "retail")
-SECTOR_ALIASES = {"retail": "comercio", "comercio": "comercio", "clinica": "clinica"}
+# El sector del tenant es texto libre («clinica», «Clínica dental», «retail»…): se reconoce por
+# palabras clave, sin acentos ni mayúsculas.
+SECTOR_KEYWORDS = {
+    "clinica": ("clinic", "dental", "dentist", "odontolog", "consultorio", "medic", "salud"),
+    "comercio": ("comerc", "retail", "tienda", "abarrote", "venta"),
+}
 
 Estado = Literal["verificado", "parcial", "pendiente"]
 
@@ -57,7 +62,14 @@ def load_catalog() -> Catalog:
 
 
 def normalize_sector(sector: str | None) -> str | None:
-    return SECTOR_ALIASES.get((sector or "").strip().lower())
+    plain = "".join(
+        c for c in unicodedata.normalize("NFKD", (sector or "").casefold())
+        if not unicodedata.combining(c)
+    )
+    for key, words in SECTOR_KEYWORDS.items():
+        if any(w in plain for w in words):
+            return key
+    return None
 
 
 def for_sector(sector: str | None) -> list[Obligation]:

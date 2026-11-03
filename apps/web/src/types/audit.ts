@@ -21,6 +21,7 @@ export const ACTION_LABEL: Record<string, string> = {
   DOSSIER_GENERATED: "Expediente generado",
   GAPS_ANALYZED: "Análisis de vacíos",
   GAPS_DISMISSED: "Propuestas descartadas",
+  OBLIGATIONS_LOADED: "Catálogo cargado",
   TASK_DELETED: "Tarea eliminada",
 };
 
@@ -59,6 +60,8 @@ export function describe(a: { action: string; details: Record<string, unknown> |
       return str(d.title);
     case "GAPS_DISMISSED":
       return Array.isArray(d.items) ? d.items.map((i) => str((i as Record<string, unknown>).title)).join(" · ") : "";
+    case "OBLIGATIONS_LOADED":
+      return Array.isArray(d.created) ? `${d.created.length} tarea(s): ${d.created.join(", ")}` : "";
     case "TASK_DELETED":
       return `${str(d.code)} · ${str(d.title)}`;
     case "GAPS_ANALYZED":

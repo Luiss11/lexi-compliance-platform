@@ -10,6 +10,7 @@ const NAV = [
   { href: "/asistente", label: "Asistente legal" },
   { href: "/documentos", label: "Documentos" },
   { href: "/tareas", label: "Tareas" },
+  { href: "/obligaciones", label: "Obligaciones" },
   { href: "/vacios", label: "Vacíos normativos" },
   { href: "/evidencias", label: "Evidencias" },
   { href: "/expediente", label: "Expediente" },

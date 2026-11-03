@@ -9,6 +9,7 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   "/expediente": ["ADMIN", "COMPLIANCE"],
   "/auditoria": ["ADMIN", "COMPLIANCE"],
   "/vacios": ["ADMIN", "COMPLIANCE"],
+  "/obligaciones": ["ADMIN", "COMPLIANCE"],
 };
 
 export function canAccess(pathname: string, role: Role): boolean {
