@@ -72,3 +72,10 @@ def test_municipal_regulation_applies_to_every_sector():
     # Un consultorio y un comercio de Durango deben ver los simulacros municipales
     assert "PCM-03" in {o.id for o in oc.for_sector("clinica")}
     assert "PCM-03" in {o.id for o in oc.for_sector("comercio")}
+
+
+def test_personal_data_obligations_are_verified():
+    data = [o for o in oc.load_catalog().obligaciones if o.id.startswith("DAT-")]
+    assert len(data) >= 6
+    assert all(o.estado_verificacion == "verificado" for o in data)
+    assert all(o.cita.startswith(("Art.", "Arts.")) for o in data)
