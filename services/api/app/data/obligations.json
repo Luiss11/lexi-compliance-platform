@@ -233,6 +233,141 @@
       "nota": "Verificar artículo y alcance en el texto de 2025."
     },
     {
+      "id": "PCM-01",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Art. 137",
+      "titulo": "Entregar planos y Programa Interno al establecerse",
+      "obligacion": "Quien establezca, construya o amplíe un comercio, oficina, consultorio o inmueble con afluencia de personas debe presentar a la Dirección Municipal los planos del inmueble, el plano del equipo de protección civil y el Programa Interno de Protección Civil.",
+      "frecuencia": "una_vez",
+      "evidencia_sugerida": "Acuse de entrega de planos y Programa Interno ante la Dirección Municipal",
+      "cita_textual": null,
+      "estado_verificacion": "verificado",
+      "nota": "El texto dice 'clubes, hospitales, sanatorios, comercios, oficinas y de servicios'; confirmar con la Dirección Municipal si un consultorio pequeño cae en este supuesto."
+    },
+    {
+      "id": "PCM-02",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Arts. 62, 64 y 140 fr. III",
+      "titulo": "Constituir la Unidad Interna de Protección Civil",
+      "obligacion": "Integrar una Unidad Interna con personal del establecimiento, protocolizada con acta constitutiva y certificada por la Dirección Municipal.",
+      "frecuencia": "una_vez",
+      "evidencia_sugerida": "Acta constitutiva y certificación de la Dirección Municipal",
+      "cita_textual": "deberá ser certificada por la Dirección Municipal",
+      "estado_verificacion": "verificado",
+      "nota": "El incumplimiento puede sancionarse con multa de 10 a 1000 UMA y clausura temporal o definitiva (art. 266)."
+    },
+    {
+      "id": "PCM-03",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Arts. 63 y 67",
+      "titulo": "Simulacros al menos dos veces al año",
+      "obligacion": "La Unidad Interna debe hacer simulacros cuando menos dos veces al año; si se pide apoyo a la Dirección Municipal, la solicitud es por escrito con dos semanas de anticipación.",
+      "frecuencia": "anual",
+      "evidencia_sugerida": "Acta de cada simulacro y solicitud a la Dirección Municipal",
+      "cita_textual": "cuando menos dos veces al año",
+      "estado_verificacion": "verificado",
+      "nota": "Es más exigente que la NOM-002-STPS (una vez al año en riesgo ordinario): en Durango conviene cumplir el reglamento municipal."
+    },
+    {
+      "id": "PCM-04",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Art. 65",
+      "titulo": "Capacitación y registro de personas vulnerables",
+      "obligacion": "El personal de la Unidad Interna toma cursos de primeros auxilios, prevención y combate de incendios, evacuación y búsqueda y rescate, y se lleva un registro de personas con discapacidad y adultos mayores que laboran o asisten.",
+      "frecuencia": "anual",
+      "evidencia_sugerida": "Constancias de cursos y registro actualizado",
+      "cita_textual": null,
+      "estado_verificacion": "verificado",
+      "nota": null
+    },
+    {
+      "id": "PCM-05",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Art. 140 fr. I y II",
+      "titulo": "Equipo contra incendio, señales y luces de emergencia",
+      "obligacion": "Tener extintores o hidrantes adecuados, señales informativas, preventivas, restrictivas y de obligación conforme a las NOM, luces de emergencia e instructivos para emergencias en sitios visibles.",
+      "frecuencia": "continua",
+      "evidencia_sugerida": "Fotos de extintores, señalización y luces de emergencia",
+      "cita_textual": null,
+      "estado_verificacion": "verificado",
+      "nota": null
+    },
+    {
+      "id": "PCM-06",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Art. 140 fr. V y VI",
+      "titulo": "Salidas de emergencia despejadas",
+      "obligacion": "Mantener despejados pasillos y salidas de emergencia, señalizados, iluminados, sin candados y con puertas que abran hacia afuera; de preferencia con barra de pánico.",
+      "frecuencia": "continua",
+      "evidencia_sugerida": "Fotos periódicas de salidas y pasillos",
+      "cita_textual": "Tener despejados pasillos, andadores y salidas de emergencia",
+      "estado_verificacion": "verificado",
+      "nota": null
+    },
+    {
+      "id": "PCM-07",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Art. 140 fr. IV",
+      "titulo": "Plan de contingencias según el giro",
+      "obligacion": "Elaborar un plan de contingencias y medidas de seguridad de acuerdo al giro del establecimiento y a su vulnerabilidad.",
+      "frecuencia": "anual",
+      "evidencia_sugerida": "Plan de contingencias firmado",
+      "cita_textual": null,
+      "estado_verificacion": "verificado",
+      "nota": null
+    },
+    {
+      "id": "PCM-08",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Art. 140 fr. VIII",
+      "titulo": "Cupo máximo y bitácoras de mantenimiento",
+      "obligacion": "Indicar el cupo máximo en la entrada, de acuerdo con lo autorizado por Desarrollo Urbano, y llevar bitácoras de mantenimiento de extintores y demás equipo.",
+      "frecuencia": "continua",
+      "evidencia_sugerida": "Letrero de cupo máximo y bitácoras",
+      "cita_textual": "Indicar cupo máximo en la entrada",
+      "estado_verificacion": "verificado",
+      "nota": null
+    },
+    {
+      "id": "PCM-09",
+      "sector": "todos",
+      "norma": "Reglamento de Protección Civil del Municipio de Durango",
+      "norma_titulo": "Reglamento de Protección Civil del Municipio de Durango",
+      "publicacion": "Gaceta Municipal No. 372, 09-06-2017",
+      "cita": "Art. 250",
+      "titulo": "Permitir las inspecciones de Protección Civil",
+      "obligacion": "Permitir las inspecciones, que tienen carácter de visitas domiciliarias, y entregar la información que se pida.",
+      "frecuencia": "por_evento",
+      "evidencia_sugerida": "Registro de cada inspección y acta",
+      "cita_textual": "están obligados a permitirlas",
+      "estado_verificacion": "verificado",
+      "nota": null
+    },
+    {
       "id": "CLI-01",
       "sector": "clinica",
       "norma": "NOM-004-SSA3-2012",
@@ -470,9 +605,9 @@
       "motivo": "No leí el texto oficial."
     },
     {
-      "tema": "Protección civil estatal y municipal de Durango (programa interno, dictamen)",
+      "tema": "Ley estatal de protección civil de Durango",
       "sector": "todos",
-      "motivo": "Depende de la ley estatal y del reglamento municipal; falta consultarlos."
+      "motivo": "Solo se revisó el reglamento municipal de 2017; falta la ley estatal y confirmar que no exista una versión más reciente del reglamento."
     },
     {
       "tema": "Bitácora de generación de RPBI y su plazo de conservación",
@@ -482,7 +617,7 @@
     {
       "tema": "Licencia de uso de suelo y permisos municipales",
       "sector": "todos",
-      "motivo": "Depende del reglamento municipal; falta el PDF del municipio."
+      "motivo": "Falta el reglamento municipal de construcción o de uso de suelo."
     },
     {
       "tema": "Control de rayos X (aviso y licencia ante COFEPRIS)",

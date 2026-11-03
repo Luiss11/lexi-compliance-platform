@@ -62,3 +62,13 @@ def test_sector_aliases_and_unknown_sector():
 def test_open_topics_are_listed():
     pend = oc.load_catalog().pendientes
     assert pend and all(p.motivo for p in pend)
+
+
+def test_municipal_regulation_applies_to_every_sector():
+    municipal = [o for o in oc.load_catalog().obligaciones if o.id.startswith("PCM-")]
+    assert len(municipal) >= 8
+    assert all(o.sector == "todos" and o.estado_verificacion == "verificado" for o in municipal)
+    assert all("Durango" in o.norma for o in municipal)
+    # Un consultorio y un comercio de Durango deben ver los simulacros municipales
+    assert "PCM-03" in {o.id for o in oc.for_sector("clinica")}
+    assert "PCM-03" in {o.id for o in oc.for_sector("comercio")}
