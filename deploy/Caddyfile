@@ -1,0 +1,34 @@
+# Proxy HTTPS de producción. DOMAIN y ACME_EMAIL vienen de .env.prod.
+#
+# Caddy pide el certificado a Let's Encrypt la primera vez que arranca (el dominio debe
+# apuntar ya a este servidor y los puertos 80 y 443 deben estar abiertos) y lo renueva solo.
+# Las peticiones por http:// se redirigen a https:// automáticamente.
+#
+# Con DOMAIN=localhost (prueba en tu equipo) Caddy usa un certificado propio no público:
+# el navegador avisará de que no es de confianza; es lo esperado.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# El navegador recordará durante un año que este sitio solo va por HTTPS
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+		-Server
+		-X-Powered-By
+	}
+
+	# Los PDFs y evidencias suben por la web (límite de la server action: 25 MB)
+	request_body {
+		max_size 26MB
+	}
+
+	reverse_proxy web:3000
+}

@@ -1,0 +1,109 @@
+# Pila de PRODUCCIÓN. Desarrollo sigue usando docker-compose.yml.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# (o simplemente: make prod-up). Guía completa: docs/INSTALACION_PRODUCCION.md
+#
+# Diferencias con desarrollo:
+#   - Solo Caddy publica puertos (80 y 443). Postgres, Qdrant, la API y la web solo son
+#     alcanzables dentro de la red interna de Docker.
+#   - Caddy obtiene y renueva el certificado HTTPS solo (Let's Encrypt).
+#   - La web es una compilación de producción (next build) y la API corre sin --reload.
+#   - Sin valores por defecto para secretos: si falta uno, docker compose se niega a arrancar.
+#   - Todo se reinicia solo si el proceso cae o el servidor se reinicia.
+
+name: lexi-prod
+
+x-db-url: &db-url postgresql://${POSTGRES_USER:?Falta POSTGRES_USER en .env.prod}:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env.prod}@postgres:5432/${POSTGRES_DB:?Falta POSTGRES_DB en .env.prod}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: [pg_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.0
+    restart: unless-stopped
+    volumes: [qdrant_data:/qdrant/storage]
+
+  api:
+    build: ./services/api
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      APP_ENV: production
+      DATABASE_URL: *db-url
+      QDRANT_URL: http://qdrant:6333
+      STORAGE_DIR: /data/storage
+      CORS_ORIGINS: '["https://${DOMAIN:?Falta DOMAIN en .env.prod}"]'
+    # Sin --reload. --proxy-headers: la API solo es alcanzable desde la red interna, así que
+    # puede confiar en el X-Forwarded-For que le pasa la web (la IP real del visitante).
+    # Un solo proceso: los contadores de límites (login, IA) viven en memoria.
+    command:
+      - uvicorn
+      - app.main:app
+      - --host=0.0.0.0
+      - --port=8000
+      - --proxy-headers
+      - --forwarded-allow-ips=*
+      - --no-server-header
+    volumes: [storage:/data/storage]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    depends_on:
+      postgres: { condition: service_healthy }
+      qdrant: { condition: service_started }
+
+  # Contenedor de un solo uso: aplica las migraciones Prisma y termina.
+  migrate:
+    build: { context: ./apps/web, dockerfile: Dockerfile.prod, target: migrator }
+    restart: "no"
+    environment:
+      DATABASE_URL: *db-url
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  web:
+    build: { context: ./apps/web, dockerfile: Dockerfile.prod, target: runner }
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:8000/api/v1
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      api: { condition: service_healthy }
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Falta ACME_EMAIL en .env.prod}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+
+volumes:
+  pg_data:
+  qdrant_data:
+  storage:
+  caddy_data:
+  caddy_config:

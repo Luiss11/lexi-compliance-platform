@@ -1,5 +1,8 @@
 import logging
+import os
 from functools import lru_cache
+from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,6 +11,9 @@ log = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # "production" activa la revisión de arranque (check_production_settings)
+    app_env: str = "development"
 
     database_url: str = "postgresql://lexi:lexi_dev@localhost:5432/lexi"
 
@@ -86,3 +92,71 @@ def check_jwt_secret(current: Settings | None = None) -> None:
         f"{MIN_JWT_SECRET_LENGTH} caracteres en el archivo .env "
         "(por ejemplo: python -c \"import secrets; print(secrets.token_urlsafe(48))\")."
     )
+
+
+APP_ENVS = {"development", "production"}
+DEV_DB_PASSWORDS = {"lexi_dev"}
+
+
+def production_problems(cfg: Settings) -> list[str]:
+    """Lo que impide arrancar en producción. Lista vacía si todo está bien."""
+    problems: list[str] = []
+
+    if cfg.allow_insecure_jwt_secret:
+        problems.append("ALLOW_INSECURE_JWT_SECRET está activo; es solo para desarrollo")
+
+    db = urlsplit(cfg.database_url)
+    if db.password is None or db.password in DEV_DB_PASSWORDS:
+        problems.append("DATABASE_URL usa la contraseña de desarrollo o ninguna")
+    if db.hostname in {"localhost", "127.0.0.1"}:
+        problems.append(
+            "DATABASE_URL apunta a localhost; dentro de Docker debe ser el servicio postgres"
+        )
+
+    if cfg.llm_provider not in {"openai", "ollama"}:
+        problems.append(f"LLM_PROVIDER={cfg.llm_provider!r} no existe (usa openai u ollama)")
+    elif cfg.llm_provider == "openai" and not cfg.openai_api_key:
+        problems.append("falta OPENAI_API_KEY (LLM_PROVIDER=openai)")
+
+    if cfg.vector_backend == "qdrant" and not cfg.qdrant_url:
+        problems.append("falta QDRANT_URL (VECTOR_BACKEND=qdrant)")
+
+    storage = Path(cfg.storage_dir)
+    try:
+        storage.mkdir(parents=True, exist_ok=True)
+        writable = os.access(storage, os.W_OK)
+    except OSError:
+        writable = False
+    if not writable:
+        problems.append(
+            f"no se puede escribir en STORAGE_DIR={cfg.storage_dir}; ahí van las evidencias"
+        )
+
+    return problems
+
+
+def check_startup(current: Settings | None = None) -> None:
+    """Revisión de arranque: la API se niega a iniciar con una configuración peligrosa.
+
+    Siempre: APP_ENV válido y JWT_SECRET seguro (salvo el permiso explícito de desarrollo).
+    Con APP_ENV=production, además, todo lo de production_problems().
+    """
+    cfg = current or settings
+    if cfg.app_env not in APP_ENVS:
+        # Un error de dedo ("prod") no debe desactivar en silencio la revisión
+        raise RuntimeError(f"APP_ENV={cfg.app_env!r} no es válido; usa development o production.")
+
+    if cfg.app_env == "production":
+        problems = production_problems(cfg)
+        jwt_problem = jwt_secret_problem(cfg.jwt_secret)
+        if jwt_problem:
+            problems.insert(0, f"JWT_SECRET {jwt_problem}")
+        if problems:
+            raise RuntimeError(
+                "La API no arranca en producción. Corrige en .env.prod:\n  - "
+                + "\n  - ".join(problems)
+            )
+        log.info("Revisión de arranque de producción: todo en orden")
+        return
+
+    check_jwt_secret(cfg)

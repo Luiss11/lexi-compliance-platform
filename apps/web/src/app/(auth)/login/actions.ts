@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { API_URL, COOKIE_NAME } from "@/lib/session";
 
@@ -17,11 +17,19 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { error: "Completa organización, correo y contraseña." };
   }
 
+  // La API ve siempre la IP de este servidor, no la del navegador. En producción Caddy pone
+  // la IP real en X-Forwarded-For (e ignora la que mande el cliente); se la pasamos a la API
+  // para que el freno de intentos fallidos por IP cuente a cada visitante por separado.
+  const clientIp = headers().get("x-forwarded-for")?.split(",")[0]?.trim();
+
   let res: Response;
   try {
     res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(clientIp ? { "X-Forwarded-For": clientIp } : {}),
+      },
       body: JSON.stringify({ tenant_slug, email, password }),
       cache: "no-store",
     });

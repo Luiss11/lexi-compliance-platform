@@ -1,4 +1,4 @@
-.PHONY: up down logs migrate seed dev-web dev-api test lint fmt
+.PHONY: up down logs migrate seed dev-web dev-api test lint fmt \n	prod-up prod-down prod-logs prod-ps backup restore-test
 
 up:
 	docker compose up -d --build
@@ -31,3 +31,24 @@ lint:
 
 fmt:
 	cd services/api && ruff format app tests
+
+# ---------- Producción (ver docs/INSTALACION_PRODUCCION.md) ----------
+PROD = docker compose -f docker-compose.prod.yml --env-file .env.prod
+
+prod-up:
+	$(PROD) up -d --build
+
+prod-down:
+	$(PROD) down
+
+prod-logs:
+	$(PROD) logs -f --tail=100 caddy web api
+
+prod-ps:
+	$(PROD) ps
+
+backup:
+	scripts/backup.sh
+
+restore-test:
+	scripts/restore-test.sh --latest

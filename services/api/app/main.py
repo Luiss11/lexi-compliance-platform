@@ -4,14 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
-from app.core.config import check_jwt_secret, settings
+from app.core.config import check_startup, settings
 from app.core.errors import register_exception_handlers
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # La API no arranca con un JWT_SECRET de ejemplo o muy corto (hallazgo H-01)
-    check_jwt_secret()
+    # No arranca con un JWT_SECRET de ejemplo (H-01) ni, en producción, sin lo esencial
+    check_startup()
     yield
 
 

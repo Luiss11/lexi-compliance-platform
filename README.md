@@ -49,6 +49,7 @@ Desarrollo sin Docker para la app: `make dev-web` y `make dev-api` (ver `Makefil
 
 ## Documentación
 
+- [Instalación en producción (servidor con HTTPS y respaldos)](docs/INSTALACION_PRODUCCION.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Convenciones de trabajo (ramas, commits, PRs)](docs/CONTRIBUTING.md)
 - [Calendario de sprints](docs/SPRINTS.md)

@@ -71,8 +71,12 @@ class User(Base):
     name: Mapped[str] = mapped_column(String)
     email: Mapped[str] = mapped_column(String)
     password_hash: Mapped[str] = mapped_column("passwordHash", String)
-    # En PostgreSQL es el enum "Role"; asyncpg lo entrega como str
-    role: Mapped[str] = mapped_column(String)
+    # En PostgreSQL es el enum nativo "Role" de Prisma. Declararlo como String hacía fallar
+    # los INSERT (crear organización o usuario): Postgres no convierte varchar a enum solo.
+    # Valores como texto para que el resto del código siga trabajando con str.
+    role: Mapped[str] = mapped_column(
+        Enum("ADMIN", "COMPLIANCE", "OPERATOR", name="Role", create_type=False)
+    )
     # Usuario desactivado: no puede iniciar sesión, pero su historial se conserva
     active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=text("true"), nullable=False
