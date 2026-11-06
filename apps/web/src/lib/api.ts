@@ -1,24 +1,28 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+// Solo para código de servidor (server actions). Llamadas a la API con el token de la sesión.
+import { redirect } from "next/navigation";
+import { API_URL, getToken } from "@/lib/session";
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
+/** Llama a la API; null si no hay conexión. Sin sesión, manda a /logout. */
+export async function apiSend(method: "POST" | "PATCH", path: string, body?: unknown): Promise<Response | null> {
+  const token = getToken();
+  if (!token) redirect("/logout");
+  try {
+    return await fetch(`${API_URL}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    return null;
   }
 }
 
-export async function api<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, detail.detail ?? res.statusText);
-  }
-  return res.json() as Promise<T>;
+/** Mensaje en español para mostrar: el primer detalle de campo si existe, si no el mensaje general. */
+export async function apiError(res: Response): Promise<string> {
+  const body = await res.json().catch(() => null);
+  const field = body?.error?.details?.fields?.[0]?.msg;
+  return field ?? body?.error?.message ?? "No se pudo completar la acción.";
 }
+
+export const NO_CONNECTION = "No se pudo conectar con el servidor. Intenta de nuevo en un momento.";

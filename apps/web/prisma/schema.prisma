@@ -57,6 +57,7 @@ model User {
   email        String
   passwordHash String
   role         Role     @default(OPERATOR)
+  active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   tasks        Task[]   @relation("assignee")
   evidence     EvidenceFile[]

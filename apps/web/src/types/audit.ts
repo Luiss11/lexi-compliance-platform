@@ -22,6 +22,11 @@ export const ACTION_LABEL: Record<string, string> = {
   GAPS_ANALYZED: "Análisis de vacíos",
   GAPS_DISMISSED: "Propuestas descartadas",
   OBLIGATIONS_LOADED: "Catálogo cargado",
+  USER_CREATED: "Usuario creado",
+  USER_UPDATED: "Usuario modificado",
+  USER_PASSWORD_RESET: "Contraseña restablecida",
+  PASSWORD_CHANGED: "Contraseña cambiada",
+  TENANT_CREATED: "Organización creada",
   TASK_DELETED: "Tarea eliminada",
 };
 
@@ -60,6 +65,14 @@ export function describe(a: { action: string; details: Record<string, unknown> |
       return str(d.title);
     case "GAPS_DISMISSED":
       return Array.isArray(d.items) ? d.items.map((i) => str((i as Record<string, unknown>).title)).join(" · ") : "";
+    case "USER_CREATED":
+      return `${str(d.email)} · rol ${str(d.role)}`;
+    case "USER_UPDATED":
+      return `${str(d.email)} · campos: ${Array.isArray(d.fields) ? d.fields.join(", ") : ""}`;
+    case "USER_PASSWORD_RESET":
+      return str(d.email);
+    case "TENANT_CREATED":
+      return `${str(d.slug)} · ${str(d.sector)}`;
     case "OBLIGATIONS_LOADED":
       return Array.isArray(d.created) ? `${d.created.length} tarea(s): ${d.created.join(", ")}` : "";
     case "TASK_DELETED":

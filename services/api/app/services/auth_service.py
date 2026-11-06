@@ -48,6 +48,13 @@ async def login(
         limits.register_login_failure(tenant_slug, email, ip)
         raise AppError(401, "INVALID_CREDENTIALS", "Correo o contraseña incorrectos.")
 
+    if not user.active:
+        # Solo se dice después de acertar la contraseña: no revela qué cuentas existen
+        raise AppError(
+            403, "ACCOUNT_DISABLED",
+            "Tu cuenta está desactivada. Contacta a la persona administradora de tu organización.",
+        )
+
     limits.register_login_success(tenant_slug, email)
     token = create_access_token(user.id, user.tenant_id, Role(user.role))
     return LoginResponse(
@@ -68,4 +75,6 @@ async def me(db: AsyncSession, actor: CurrentUser) -> MeResponse:
     if row is None:
         raise unauthenticated()
     user, tenant = row
+    if not user.active:
+        raise unauthenticated()
     return MeResponse(user=_user_out(user), tenant=_tenant_out(tenant))

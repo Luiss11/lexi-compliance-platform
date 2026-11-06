@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -72,6 +73,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column("passwordHash", String)
     # En PostgreSQL es el enum "Role"; asyncpg lo entrega como str
     role: Mapped[str] = mapped_column(String)
+    # Usuario desactivado: no puede iniciar sesión, pero su historial se conserva
+    active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true"), nullable=False
+    )
 
 
 class Document(Base):

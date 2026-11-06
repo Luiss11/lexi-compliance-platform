@@ -55,6 +55,7 @@ class SlidingWindow:
 
 _login_failures = SlidingWindow()
 _ai_calls = SlidingWindow()
+_password_failures = SlidingWindow()
 
 _HOUR = 3600
 _DAY = 86400
@@ -64,6 +65,7 @@ def reset_all() -> None:
     """Para pruebas: borra todos los contadores."""
     _login_failures.reset()
     _ai_calls.reset()
+    _password_failures.reset()
 
 
 def _too_many(status_code: int, code: str, message: str, retry_after: int) -> AppError:
@@ -106,6 +108,27 @@ def register_login_failure(tenant_slug: str, email: str, ip: str | None) -> None
 def register_login_success(tenant_slug: str, email: str) -> None:
     """Un acceso correcto reinicia la cuenta (la IP conserva su historial)."""
     _login_failures.clear(_account_key(tenant_slug, email))
+
+
+# ------------------------------------------------- cambio de contraseña propia
+def check_password_change_allowed(user_id: str) -> None:
+    """Quien tenga la sesión abierta no puede adivinar la contraseña actual sin freno."""
+    key = f"pw:{user_id}"
+    window = settings.login_window_seconds
+    if _password_failures.count(key, window) >= settings.login_max_failures:
+        raise _too_many(
+            429, "TOO_MANY_ATTEMPTS",
+            "Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.",
+            _password_failures.retry_after(key, window),
+        )
+
+
+def register_password_failure(user_id: str) -> None:
+    _password_failures.add(f"pw:{user_id}")
+
+
+def register_password_success(user_id: str) -> None:
+    _password_failures.clear(f"pw:{user_id}")
 
 
 # ------------------------------------------------------------------- IA (H-04)
