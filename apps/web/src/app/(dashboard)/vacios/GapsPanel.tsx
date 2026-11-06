@@ -15,9 +15,9 @@ import {
 } from "./actions";
 
 const PRIORITY_STYLE = {
-  ALTA: "bg-[#FBE9E7] text-[#9A2D20]",
-  MEDIA: "bg-[#FFF3D6] text-[#7A5600]",
-  BAJA: "bg-[#E6F1EF] text-lexi",
+  ALTA: "bg-danger-soft text-danger",
+  MEDIA: "bg-warn-soft text-warn",
+  BAJA: "bg-lexi-soft text-lexi",
 } as const;
 
 function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
@@ -41,9 +41,9 @@ const C0: DismissState = { dismissed: null, error: null };
 function Banner({ tone, children }: { tone: "error" | "ok" | "plain"; children: React.ReactNode }) {
   const style =
     tone === "error"
-      ? "border-[#E7B8B1] bg-[#FBE9E7] text-[#9A2D20]"
+      ? "border-danger-line bg-danger-soft text-danger"
       : tone === "ok"
-        ? "border-[#B7D6D2] bg-[#E6F1EF] text-lexi"
+        ? "border-lexi-line bg-lexi-soft text-lexi"
         : "border-line bg-white";
   return (
     <div role={tone === "error" ? "alert" : "status"} className={`rounded-md border px-4 py-3 text-sm ${style}`}>
@@ -120,7 +120,7 @@ function Results({ result }: { result: GapAnalysis }) {
                   value={s.key}
                   checked={checked}
                   onChange={(e) => setPicked((p) => ({ ...p, [s.key]: e.target.checked }))}
-                  className="mt-1 h-5 w-5 shrink-0 accent-[#1F7A68]"
+                  className="mt-1 h-5 w-5 shrink-0 accent-lexi-bright"
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -146,7 +146,7 @@ function Results({ result }: { result: GapAnalysis }) {
               <button
                 type="submit"
                 formAction={dismiss}
-                className="min-h-11 rounded-md border border-line bg-white px-4 text-sm hover:bg-[#F5F4EF]"
+                className="min-h-11 rounded-md border border-line bg-white px-4 text-sm hover:bg-paper"
                 title="Las sugerencias sin marcar se guardan como no aplicables y no vuelven a proponerse"
               >
                 Descartar {unchecked} sin marcar

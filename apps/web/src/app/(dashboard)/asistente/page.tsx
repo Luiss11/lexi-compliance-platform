@@ -19,7 +19,7 @@ export default async function AsistentePage() {
 
       <div
         role="note"
-        className="rounded-md border border-[#E3D3A6] bg-[#FFF8E6] px-4 py-3 text-sm text-[#5C4500]"
+        className="rounded-md border border-warn-line bg-warn-soft px-4 py-3 text-sm text-warn"
       >
         <strong>Aviso:</strong> Lexi es una herramienta de apoyo y no sustituye la asesoría de un
         abogado. Las respuestas se basan únicamente en los documentos que cargó tu organización.

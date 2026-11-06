@@ -65,12 +65,12 @@ export default async function EvidenciaPage({
       )}
 
       {searchParams.error && (
-        <div role="alert" className="rounded-md border border-[#E7B8B1] bg-[#FBE9E7] px-4 py-3 text-sm text-[#9A2D20]">
+        <div role="alert" className="rounded-md border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">
           {searchParams.error}
         </div>
       )}
       {searchParams.ok && (
-        <div role="status" className="break-all rounded-md border border-[#B7D6D2] bg-[#E6F1EF] px-4 py-3 text-sm text-lexi">
+        <div role="status" className="break-all rounded-md border border-lexi-line bg-lexi-soft px-4 py-3 text-sm text-lexi">
           {searchParams.ok}
         </div>
       )}
@@ -139,7 +139,7 @@ export default async function EvidenciaPage({
               {e.uploaded_by_name ? ` · ${e.uploaded_by_name}` : ""}
             </p>
             {e.ai_summary && (
-              <div className="rounded-md bg-[#F5F4EF] px-3 py-2 text-sm">
+              <div className="rounded-md bg-paper px-3 py-2 text-sm">
                 <p>{e.ai_summary}</p>
                 {e.ai_issues.length > 0 && (
                   <ul className="mt-1 list-disc pl-5 text-xs text-muted">
@@ -158,14 +158,14 @@ export default async function EvidenciaPage({
                 href={`/tareas/${encodeURIComponent(params.id)}/evidencia/archivo/${encodeURIComponent(e.id)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex min-h-11 items-center rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]"
+                className="flex min-h-11 items-center rounded-md border border-line px-3 text-xs hover:bg-paper"
               >
                 Ver archivo
               </a>
               <form action={reviewEvidenceAction}>
                 <input type="hidden" name="task_id" value={params.id} />
                 <input type="hidden" name="evidence_id" value={e.id} />
-                <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]">
+                <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-paper">
                   {e.ai_verdict && e.ai_verdict !== "NOT_REVIEWED" ? "Revisar de nuevo con IA" : "Revisar con IA"}
                 </button>
               </form>
@@ -173,7 +173,7 @@ export default async function EvidenciaPage({
                 <form action={verifyEvidenceAction}>
                   <input type="hidden" name="task_id" value={params.id} />
                   <input type="hidden" name="evidence_id" value={e.id} />
-                  <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]">
+                  <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-paper">
                     Verificar integridad
                   </button>
                 </form>

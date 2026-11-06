@@ -25,7 +25,8 @@ export function LoginForm({ demoHint }: { demoHint: boolean }) {
     <form action={formAction} className="flex w-full max-w-sm flex-col gap-5">
       <h2 className="font-serif text-3xl font-semibold">Iniciar sesión</h2>
 
-      {state.error && (
+      {/* state puede llegar vacío si la redirección tras el login falla en el servidor */}
+      {state?.error && (
         <p role="alert" className="rounded-md bg-danger-soft px-3 py-2.5 text-sm text-danger">
           {state.error}
         </p>
@@ -38,7 +39,7 @@ export function LoginForm({ demoHint }: { demoHint: boolean }) {
           defaultValue="clinica-sonrisa"
           autoComplete="organization"
           required
-          className="h-12 rounded-md border border-[#C9C5B9] bg-white px-3 font-normal"
+          className="h-12 rounded-md border border-line-strong bg-white px-3 font-normal"
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -48,7 +49,7 @@ export function LoginForm({ demoHint }: { demoHint: boolean }) {
           type="email"
           autoComplete="username"
           required
-          className="h-12 rounded-md border border-[#C9C5B9] bg-white px-3 font-normal"
+          className="h-12 rounded-md border border-line-strong bg-white px-3 font-normal"
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -58,7 +59,7 @@ export function LoginForm({ demoHint }: { demoHint: boolean }) {
           type="password"
           autoComplete="current-password"
           required
-          className="h-12 rounded-md border border-[#C9C5B9] bg-white px-3 font-normal"
+          className="h-12 rounded-md border border-line-strong bg-white px-3 font-normal"
         />
       </label>
 

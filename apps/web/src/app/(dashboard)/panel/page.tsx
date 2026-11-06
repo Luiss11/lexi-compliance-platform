@@ -19,33 +19,41 @@ async function loadDashboard(): Promise<Dashboard | null> {
 }
 
 const SEVERITY_STYLE: Record<Alert["severity"], { dot: string; label: string }> = {
-  high: { dot: "bg-[#B3372A]", label: "Urgente" },
-  medium: { dot: "bg-[#C98A12]", label: "Atención" },
-  info: { dot: "bg-[#5B6B7A]", label: "Pendiente" },
+  high: { dot: "bg-danger-bright", label: "Urgente" },
+  medium: { dot: "bg-warn-bright", label: "Atención" },
+  info: { dot: "bg-info-bright", label: "Pendiente" },
 };
 
 const PRIORITY_STYLE = {
-  ALTA: "bg-[#FBE9E7] text-[#9A2D20]",
-  MEDIA: "bg-[#FFF3D6] text-[#7A5600]",
-  BAJA: "bg-[#E6F1EF] text-lexi",
+  ALTA: "bg-danger-soft text-danger",
+  MEDIA: "bg-warn-soft text-warn",
+  BAJA: "bg-lexi-soft text-lexi",
 } as const;
 
-function scoreColor(score: number, total: number) {
-  if (total === 0) return "#A9ADB6";
-  if (score >= 80) return "#1F7A68";
-  if (score >= 50) return "#C98A12";
-  return "#B3372A";
+// Clases completas (no interpoladas) para que Tailwind las genere
+const SCORE_TONE = {
+  empty: { stroke: "stroke-ink-faint", text: "text-muted" },
+  ok: { stroke: "stroke-lexi-bright", text: "text-lexi" },
+  mid: { stroke: "stroke-warn-bright", text: "text-warn" },
+  low: { stroke: "stroke-danger-bright", text: "text-danger" },
+} as const;
+
+function scoreTone(score: number, total: number) {
+  if (total === 0) return SCORE_TONE.empty;
+  if (score >= 80) return SCORE_TONE.ok;
+  if (score >= 50) return SCORE_TONE.mid;
+  return SCORE_TONE.low;
 }
 
 function ScoreRing({ score, total }: { score: number; total: number }) {
   const r = 52;
   const c = 2 * Math.PI * r;
-  const color = scoreColor(score, total);
+  const tone = scoreTone(score, total);
   return (
     <svg viewBox="0 0 120 120" className="h-36 w-36 shrink-0" role="img" aria-label={`Índice de cumplimiento: ${score} de 100`}>
-      <circle cx="60" cy="60" r={r} fill="none" stroke="#ECEAE2" strokeWidth="11" />
+      <circle cx="60" cy="60" r={r} fill="none" strokeWidth="11" className="stroke-paper-deep" />
       <circle
-        cx="60" cy="60" r={r} fill="none" stroke={color} strokeWidth="11" strokeLinecap="round"
+        cx="60" cy="60" r={r} fill="none" strokeWidth="11" strokeLinecap="round" className={tone.stroke}
         strokeDasharray={`${(c * score) / 100} ${c}`} transform="rotate(-90 60 60)"
       />
       <text x="60" y="66" textAnchor="middle" className="fill-ink font-serif" fontSize="30" fontWeight="600">
@@ -66,7 +74,7 @@ function Kpi({ label, value, hint, danger }: { label: string; value: string; hin
   return (
     <div className="rounded-lg border border-line bg-white p-5">
       <div className="text-sm text-muted">{label}</div>
-      <div className={`mt-2 font-serif text-4xl font-semibold ${danger ? "text-[#B3372A]" : ""}`}>{value}</div>
+      <div className={`mt-2 font-serif text-4xl font-semibold ${danger ? "text-danger-bright" : ""}`}>{value}</div>
       {hint && <div className="mt-1 text-xs text-muted">{hint}</div>}
     </div>
   );
@@ -80,10 +88,10 @@ export default async function PanelPage() {
 
   const segments = d
     ? [
-        { label: "Pendientes", n: d.counts.backlog, color: "#C9CCD3" },
-        { label: "En curso", n: d.counts.in_progress, color: "#C98A12" },
-        { label: "En revisión", n: d.counts.in_review, color: "#5B6B7A" },
-        { label: "Cumplidas", n: d.counts.done, color: "#1F7A68" },
+        { label: "Pendientes", n: d.counts.backlog, color: "bg-ink-dim" },
+        { label: "En curso", n: d.counts.in_progress, color: "bg-warn-bright" },
+        { label: "En revisión", n: d.counts.in_review, color: "bg-info-bright" },
+        { label: "Cumplidas", n: d.counts.done, color: "bg-lexi-bright" },
       ]
     : [];
 
@@ -100,7 +108,7 @@ export default async function PanelPage() {
         </div>
         {isManager && (
           <div className="flex flex-wrap gap-2">
-            <Link href="/vacios" className="flex min-h-11 items-center rounded-md border border-line bg-white px-4 text-sm hover:bg-[#F5F4EF]">
+            <Link href="/vacios" className="flex min-h-11 items-center rounded-md border border-line bg-white px-4 text-sm hover:bg-paper">
               Buscar vacíos normativos
             </Link>
             <Link href="/expediente" className="flex min-h-11 items-center rounded-md bg-lexi px-4 text-sm font-medium text-white">
@@ -125,7 +133,7 @@ export default async function PanelPage() {
               <ScoreRing score={d.score} total={d.total_tasks} />
               <div>
                 <div className="text-sm text-muted">Índice de cumplimiento</div>
-                <div className="font-serif text-2xl font-semibold" style={{ color: scoreColor(d.score, d.total_tasks) }}>
+                <div className={`font-serif text-2xl font-semibold ${scoreTone(d.score, d.total_tasks).text}`}>
                   {d.score_label}
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-muted">
@@ -160,16 +168,16 @@ export default async function PanelPage() {
 
           <section className="rounded-lg border border-line bg-white p-5">
             <h2 className="text-sm font-semibold">Avance de las obligaciones</h2>
-            <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-[#ECEAE2]" role="img"
+            <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-paper-deep" role="img"
               aria-label={segments.map((s) => `${s.label}: ${s.n}`).join(", ")}>
               {segments.map((s) =>
-                s.n > 0 ? <div key={s.label} style={{ width: `${(s.n / d.total_tasks) * 100}%`, background: s.color }} /> : null,
+                s.n > 0 ? <div key={s.label} className={s.color} style={{ width: `${(s.n / d.total_tasks) * 100}%` }} /> : null,
               )}
             </div>
             <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
               {segments.map((s) => (
                 <li key={s.label} className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
+                  <span className={`h-2.5 w-2.5 rounded-sm ${s.color}`} />
                   {s.label} <span className="font-semibold">{s.n}</span>
                 </li>
               ))}
@@ -211,7 +219,7 @@ export default async function PanelPage() {
                         <div className="truncate">
                           <span className="font-mono text-xs text-muted">{u.code}</span> {u.title}
                         </div>
-                        <div className={`text-xs ${u.days_left < 0 ? "font-medium text-[#B3372A]" : "text-muted"}`}>
+                        <div className={`text-xs ${u.days_left < 0 ? "font-medium text-danger-bright" : "text-muted"}`}>
                           {dueText(u)}
                           {u.assignee_name ? ` · ${u.assignee_name}` : ""}
                         </div>

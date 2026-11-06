@@ -21,10 +21,10 @@ export const VERDICT_LABEL: Record<string, string> = {
 
 // Colores del veredicto de la IA (asesora, no decide)
 export const VERDICT_STYLE: Record<string, string> = {
-  NOT_REVIEWED: "bg-[#ECEAE2] text-[#4B4F58]",
-  VALID: "bg-[#E6F1EF] text-[#1F6F5F]",
-  INCOMPLETE: "bg-[#FFF3D6] text-[#7A5600]",
-  INVALID: "bg-[#FBE9E7] text-[#9A2D20]",
+  NOT_REVIEWED: "bg-paper-deep text-muted",
+  VALID: "bg-lexi-soft text-lexi",
+  INCOMPLETE: "bg-warn-soft text-warn",
+  INVALID: "bg-danger-soft text-danger",
 };
 
 export function formatSize(bytes: number): string {

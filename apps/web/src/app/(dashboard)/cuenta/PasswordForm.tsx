@@ -34,7 +34,7 @@ export function PasswordForm() {
       </label>
       <Submit />
       {state.error && (
-        <p role="alert" className="text-sm text-[#9A2D20]">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       )}

@@ -28,9 +28,9 @@ async function api<T>(path: string): Promise<T | null> {
 }
 
 const PRIORITY_STYLE = {
-  ALTA: "bg-[#FBE9E7] text-[#9A2D20]",
-  MEDIA: "bg-[#FFF3D6] text-[#7A5600]",
-  BAJA: "bg-[#E6F1EF] text-lexi",
+  ALTA: "bg-danger-soft text-danger",
+  MEDIA: "bg-warn-soft text-warn",
+  BAJA: "bg-lexi-soft text-lexi",
 } as const;
 
 function formatDate(iso: string) {
@@ -67,7 +67,7 @@ export default async function TareasPage({
       </header>
 
       {searchParams.error && (
-        <div role="alert" className="rounded-md border border-[#E7B8B1] bg-[#FBE9E7] px-4 py-3 text-sm text-[#9A2D20]">
+        <div role="alert" className="rounded-md border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">
           {searchParams.error}
         </div>
       )}
@@ -125,7 +125,7 @@ export default async function TareasPage({
         {COLUMNS.map((col) => {
           const items = tasks.filter((t) => t.status === col.status);
           return (
-            <div key={col.status} className="flex flex-col gap-3 rounded-lg bg-[#ECEAE2] p-3">
+            <div key={col.status} className="flex flex-col gap-3 rounded-lg bg-paper-deep p-3">
               <h2 className="flex items-center justify-between px-1 text-sm font-semibold">
                 {col.label}
                 <span className="rounded-full bg-white px-2 text-xs font-normal">{items.length}</span>
@@ -142,12 +142,12 @@ export default async function TareasPage({
                   <h3 className="text-sm font-medium">{t.title}</h3>
                   {t.citation && <p className="text-xs text-muted">{t.citation}</p>}
                   {t.suggested_by_ai && (
-                    <span className="w-fit rounded bg-[#EEF0F5] px-2 py-0.5 text-[11px] text-[#3F4B66]">Sugerida por IA</span>
+                    <span className="w-fit rounded bg-info-soft px-2 py-0.5 text-[11px] text-info">Sugerida por IA</span>
                   )}
                   <div className="flex flex-wrap gap-x-3 text-xs text-muted">
                     <span>{t.assignee_name ?? "Sin asignar"}</span>
                     {t.due_date && (
-                      <span className={t.overdue ? "font-medium text-[#9A2D20]" : ""}>
+                      <span className={t.overdue ? "font-medium text-danger" : ""}>
                         {t.overdue ? "Vencida · " : "Vence "}
                         {formatDate(t.due_date)}
                       </span>
@@ -171,7 +171,7 @@ export default async function TareasPage({
                         <form key={to} action={moveTaskAction}>
                           <input type="hidden" name="id" value={t.id} />
                           <input type="hidden" name="status" value={to} />
-                          <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]">
+                          <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-paper">
                             Pasar a {STATUS_LABEL[to].toLowerCase()}
                           </button>
                         </form>
@@ -180,12 +180,12 @@ export default async function TareasPage({
                   {isManager && t.status !== "DONE" && t.evidence_count === 0 && (
                     <details className="text-xs">
                       <summary className="flex min-h-11 cursor-pointer items-center text-muted underline">Eliminar</summary>
-                      <form action={deleteTaskAction} className="flex flex-col gap-2 rounded-md bg-[#FBE9E7] p-3">
+                      <form action={deleteTaskAction} className="flex flex-col gap-2 rounded-md bg-danger-soft p-3">
                         <input type="hidden" name="id" value={t.id} />
-                        <p className="text-[#9A2D20]">
+                        <p className="text-danger">
                           Se elimina {t.code} y queda registrado en Auditoría. No se puede deshacer.
                         </p>
-                        <button type="submit" className="min-h-11 rounded-md bg-[#9A2D20] px-3 font-medium text-white">
+                        <button type="submit" className="min-h-11 rounded-md bg-danger px-3 font-medium text-white">
                           Sí, eliminar
                         </button>
                       </form>

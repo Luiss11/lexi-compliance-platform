@@ -42,9 +42,9 @@ function dueDate(iso: string) {
 }
 
 const INTEGRITY: Record<Integrity, { label: string; style: string }> = {
-  OK: { label: "Íntegra", style: "bg-[#E6F1EF] text-[#1F6F5F]" },
-  TAMPERED: { label: "ALTERADA", style: "bg-[#FBE9E7] text-[#9A2D20]" },
-  MISSING: { label: "ARCHIVO FALTANTE", style: "bg-[#FBE9E7] text-[#9A2D20]" },
+  OK: { label: "Íntegra", style: "bg-lexi-soft text-lexi" },
+  TAMPERED: { label: "ALTERADA", style: "bg-danger-soft text-danger" },
+  MISSING: { label: "ARCHIVO FALTANTE", style: "bg-danger-soft text-danger" },
 };
 
 export default async function ExpedientePage() {
@@ -71,7 +71,7 @@ export default async function ExpedientePage() {
         <div className="flex flex-wrap gap-2">
           <a
             href="/expediente/json"
-            className="flex min-h-11 items-center rounded-md border border-line bg-white px-4 text-sm hover:bg-[#F5F4EF]"
+            className="flex min-h-11 items-center rounded-md border border-line bg-white px-4 text-sm hover:bg-paper"
           >
             Descargar JSON
           </a>
@@ -90,7 +90,7 @@ export default async function ExpedientePage() {
 
       <section
         className={`rounded-lg border px-4 py-3 text-sm break-inside-avoid ${
-          clean ? "border-[#B7D6D2] bg-[#E6F1EF] text-[#1F6F5F]" : "border-[#E7B8B1] bg-[#FBE9E7] text-[#9A2D20]"
+          clean ? "border-lexi-line bg-lexi-soft text-lexi" : "border-danger-line bg-danger-soft text-danger"
         }`}
       >
         {d.summary.evidence_files === 0
@@ -115,14 +115,14 @@ export default async function ExpedientePage() {
       </section>
 
       {withoutEvidence.length > 0 && (
-        <section className="rounded-lg border border-[#E7B8B1] bg-[#FBE9E7] px-4 py-3 text-sm text-[#9A2D20] break-inside-avoid">
+        <section className="rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger break-inside-avoid">
           <strong>Hallazgo:</strong> {withoutEvidence.map((t) => t.code).join(", ")} figura(n) como
           cumplida(s) sin evidencia sellada. Ante una auditoría no es posible demostrar su cumplimiento.
         </section>
       )}
 
       {d.summary.ai_flagged > 0 && (
-        <section className="rounded-lg border border-[#EAD7A5] bg-[#FFF3D6] px-4 py-3 text-sm text-[#7A5600] break-inside-avoid">
+        <section className="rounded-lg border border-warn-line bg-warn-soft px-4 py-3 text-sm text-warn break-inside-avoid">
           <strong>Observación:</strong> la revisión automática marcó {d.summary.ai_flagged} evidencia(s) como
           incompleta(s) o no válida(s). Revísalas antes de una auditoría.
         </section>
@@ -138,7 +138,7 @@ export default async function ExpedientePage() {
                 <p className="font-mono text-xs text-muted">{t.code}</p>
                 <h3 className="font-medium">{t.title}</h3>
               </div>
-              <span className="rounded bg-[#ECEAE2] px-2 py-0.5 text-xs">{STATUS_LABEL[t.status as TaskStatus] ?? t.status}</span>
+              <span className="rounded bg-paper-deep px-2 py-0.5 text-xs">{STATUS_LABEL[t.status as TaskStatus] ?? t.status}</span>
             </div>
             <p className="mt-1 text-xs text-muted">
               Prioridad {t.priority}

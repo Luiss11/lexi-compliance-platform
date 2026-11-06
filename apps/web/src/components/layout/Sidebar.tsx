@@ -41,7 +41,7 @@ export function Sidebar({ user, tenantName }: { user: SessionUser; tenantName: s
   return (
     <nav
       aria-label="Navegación principal"
-      className="flex flex-1 basis-[220px] flex-col gap-7 bg-ink px-4 py-6 text-[#E9E7E0]"
+      className="flex flex-1 basis-[220px] flex-col gap-7 bg-ink px-4 py-6 text-ink-fg"
     >
       <div className="flex items-center gap-2.5 px-2">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-lexi font-serif text-lg font-semibold text-white">
@@ -49,12 +49,12 @@ export function Sidebar({ user, tenantName }: { user: SessionUser; tenantName: s
         </div>
         <div>
           <div className="font-serif text-lg font-semibold">Lexi</div>
-          <div className="text-[11px] tracking-widest text-[#A9ADB6]">COMPLIANCE</div>
+          <div className="text-[11px] tracking-widest text-ink-faint">COMPLIANCE</div>
         </div>
       </div>
 
       <div className="rounded-md border border-ink-line bg-ink-soft px-3 py-2 text-[13px]">
-        <div className="text-[11px] text-[#A9ADB6]">Organización</div>
+        <div className="text-[11px] text-ink-faint">Organización</div>
         {tenantName}
       </div>
 
@@ -67,7 +67,7 @@ export function Sidebar({ user, tenantName }: { user: SessionUser; tenantName: s
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex min-h-11 items-center rounded-md px-3 ${
-                  active ? "bg-[#2A2E36] font-medium text-white" : "text-[#C9CCD3] hover:bg-ink-soft"
+                  active ? "bg-ink-active font-medium text-white" : "text-ink-dim hover:bg-ink-soft"
                 }`}
               >
                 {item.label}
@@ -79,18 +79,18 @@ export function Sidebar({ user, tenantName }: { user: SessionUser; tenantName: s
 
       <div className="mt-auto flex flex-col gap-3 border-t border-ink-line px-2 pt-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3B4049] text-[13px] font-semibold">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-raised text-[13px] font-semibold">
             {initials(user.full_name)}
           </div>
           <div className="min-w-0 text-[13px]">
             <div className="truncate">{user.full_name}</div>
-            <div className="truncate text-xs text-[#A9ADB6]">{ROLE_LABEL[user.role]}</div>
+            <div className="truncate text-xs text-ink-faint">{ROLE_LABEL[user.role]}</div>
           </div>
         </div>
         {/* <a> y no <Link>: Link precarga la ruta y cerraría la sesión sin que hagas clic */}
         <a
           href="/logout"
-          className="flex min-h-11 items-center rounded-md px-3 text-sm text-[#C9CCD3] hover:bg-ink-soft"
+          className="flex min-h-11 items-center rounded-md px-3 text-sm text-ink-dim hover:bg-ink-soft"
         >
           Cerrar sesión
         </a>

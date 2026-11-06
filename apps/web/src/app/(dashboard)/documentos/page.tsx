@@ -43,12 +43,12 @@ export default async function DocumentosPage({
       </header>
 
       {searchParams.error && (
-        <div role="alert" className="rounded-md border border-[#E7B8B1] bg-[#FBE9E7] px-4 py-3 text-sm text-[#9A2D20]">
+        <div role="alert" className="rounded-md border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">
           {searchParams.error}
         </div>
       )}
       {searchParams.ok && (
-        <div role="status" className="rounded-md border border-[#B7D6D2] bg-[#E6F1EF] px-4 py-3 text-sm text-lexi">
+        <div role="status" className="rounded-md border border-lexi-line bg-lexi-soft px-4 py-3 text-sm text-lexi">
           {searchParams.ok}
         </div>
       )}
@@ -136,7 +136,7 @@ export default async function DocumentosPage({
               {canRetry && (
                 <form action={reindexDocumentAction}>
                   <input type="hidden" name="id" value={d.id} />
-                  <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-[#F5F4EF]">
+                  <button type="submit" className="min-h-11 rounded-md border border-line px-3 text-xs hover:bg-paper">
                     Indexar para el asistente
                   </button>
                 </form>

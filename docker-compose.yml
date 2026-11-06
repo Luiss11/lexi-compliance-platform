@@ -45,12 +45,16 @@ services:
       API_INTERNAL_URL: http://api:8000/api/v1
       # Sin esto, en Windows Next no detecta los cambios de los archivos montados
       WATCHPACK_POLLING: "true"
+      PORT: "4000"
     volumes:
       - ./apps/web/src:/app/src
       - ./apps/web/prisma:/app/prisma
       # Montado para que un cambio en la configuración no obligue a reconstruir la imagen
       - ./apps/web/next.config.mjs:/app/next.config.mjs
-    ports: ["4000:3000"]
+      - ./apps/web/tailwind.config.ts:/app/tailwind.config.ts
+    # Mismo puerto dentro y fuera: las server actions que redirigen piden la página
+    # siguiente al host del navegador (localhost:4000) desde dentro del contenedor
+    ports: ["4000:4000"]
     depends_on:
       postgres: { condition: service_healthy }
       api: { condition: service_started }

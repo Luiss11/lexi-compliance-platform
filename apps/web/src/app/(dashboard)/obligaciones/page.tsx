@@ -34,7 +34,7 @@ export default async function ObligacionesPage() {
       </header>
 
       {catalog === null ? (
-        <div role="alert" className="rounded-md border border-[#E7B8B1] bg-[#FBE9E7] px-4 py-3 text-sm text-[#9A2D20]">
+        <div role="alert" className="rounded-md border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">
           No se pudo cargar el catálogo. Intenta de nuevo en un momento.
         </div>
       ) : (

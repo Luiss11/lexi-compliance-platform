@@ -45,7 +45,7 @@ export function AskForm({ showScore }: { showScore: boolean }) {
       </form>
 
       {state.error && (
-        <div role="alert" className="rounded-md border border-[#E7B8B1] bg-[#FBE9E7] px-4 py-3 text-sm text-[#9A2D20]">
+        <div role="alert" className="rounded-md border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">
           {state.error}
         </div>
       )}
@@ -56,7 +56,7 @@ export function AskForm({ showScore }: { showScore: boolean }) {
             <h2 className="text-sm font-semibold">Respuesta</h2>
             <span
               className={`rounded px-2 py-0.5 text-xs font-medium ${
-                result.grounded ? "bg-[#E6F1EF] text-lexi" : "bg-[#FFF3D6] text-[#7A5600]"
+                result.grounded ? "bg-lexi-soft text-lexi" : "bg-warn-soft text-warn"
               }`}
             >
               {result.grounded ? "Con soporte documental" : "Sin soporte documental"}
@@ -75,7 +75,7 @@ export function AskForm({ showScore }: { showScore: boolean }) {
               <h3 className="text-sm font-semibold">Fuentes</h3>
               <ol className="flex flex-col gap-2">
                 {result.citations.map((c, i) => (
-                  <li key={`${c.document_id}-${i}`} className="rounded-md bg-[#F5F4EF] p-3 text-sm">
+                  <li key={`${c.document_id}-${i}`} className="rounded-md bg-paper p-3 text-sm">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <span className="font-medium">
                         [{i + 1}] {c.document_title}

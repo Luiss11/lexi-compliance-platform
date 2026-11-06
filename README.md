@@ -41,7 +41,7 @@ make seed                     # tenant demo + usuarios por rol
 
 | Servicio | URL |
 |---|---|
-| Web | http://localhost:3000 |
+| Web | http://localhost:4000 |
 | API + OpenAPI Docs | http://localhost:8000/docs |
 | Qdrant dashboard | http://localhost:6333/dashboard |
 

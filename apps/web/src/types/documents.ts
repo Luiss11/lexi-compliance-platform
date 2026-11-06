@@ -21,26 +21,26 @@ export const STATUS_INFO: Record<DocumentStatus, { label: string; hint: string; 
   UPLOADED: {
     label: "Guardado",
     hint: "Sellado con SHA-256. Aún sin indexar para el asistente.",
-    style: "bg-[#ECEAE2] text-ink",
+    style: "bg-paper-deep text-ink",
   },
   PROCESSING: {
     label: "Indexando",
     hint: "Se está preparando para el asistente.",
-    style: "bg-[#FFF3D6] text-[#7A5600]",
+    style: "bg-warn-soft text-warn",
   },
   INDEXED: {
     label: "Indexado",
     hint: "Listo para consultas del asistente.",
-    style: "bg-[#E6F1EF] text-lexi",
+    style: "bg-lexi-soft text-lexi",
   },
   NEEDS_REVIEW: {
     label: "Requiere revisión",
     hint: "El PDF no tiene texto (parece escaneado). Sube una versión con texto.",
-    style: "bg-[#FFF3D6] text-[#7A5600]",
+    style: "bg-warn-soft text-warn",
   },
   ERROR: {
     label: "Error al indexar",
     hint: "Falló la indexación. Puedes reintentarla.",
-    style: "bg-[#FBE9E7] text-[#9A2D20]",
+    style: "bg-danger-soft text-danger",
   },
 };

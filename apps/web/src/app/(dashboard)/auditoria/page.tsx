@@ -76,7 +76,7 @@ export default async function AuditoriaPage({
               href={href(f.action, 1)}
               aria-current={active ? "page" : undefined}
               className={`flex min-h-11 items-center rounded-md border px-3 text-sm ${
-                active ? "border-lexi bg-lexi text-white" : "border-line bg-white hover:bg-[#F5F4EF]"
+                active ? "border-lexi bg-lexi text-white" : "border-line bg-white hover:bg-paper"
               }`}
             >
               {f.label}
@@ -90,7 +90,7 @@ export default async function AuditoriaPage({
           No se pudo cargar la bitácora. Revisa que la API esté encendida.
         </div>
       ) : "notReady" in data ? (
-        <div role="alert" className="rounded-md border border-[#E7B8B1] bg-[#FBE9E7] px-4 py-3 text-sm text-[#9A2D20]">
+        <div role="alert" className="rounded-md border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">
           La bitácora aún no está lista: falta crear la tabla <code>audit_logs</code> en la base de datos.
         </div>
       ) : data.items.length === 0 ? (
@@ -103,7 +103,7 @@ export default async function AuditoriaPage({
             {data.items.map((e) => (
               <li key={e.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
-                  <p className={`font-medium ${ALERT.has(e.action) ? "text-[#9A2D20]" : ""}`}>
+                  <p className={`font-medium ${ALERT.has(e.action) ? "text-danger" : ""}`}>
                     {ACTION_LABEL[e.action] ?? e.action}
                   </p>
                   <p className="break-words text-xs text-muted">{describe(e)}</p>

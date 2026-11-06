@@ -14,7 +14,7 @@ const S0: FormState = { ok: null, error: null };
 function Msg({ state }: { state: FormState }) {
   if (state.error)
     return (
-      <p role="alert" className="text-sm text-[#9A2D20]">
+      <p role="alert" className="text-sm text-danger">
         {state.error}
       </p>
     );
@@ -32,7 +32,7 @@ function Button({ children, tone = "primary" }: { children: React.ReactNode; ton
   const style =
     tone === "primary"
       ? "bg-lexi text-white"
-      : "border border-line bg-white hover:bg-[#F5F4EF]";
+      : "border border-line bg-white hover:bg-paper";
   return (
     <button type="submit" disabled={pending} className={`min-h-11 rounded-md px-4 text-sm font-medium disabled:opacity-60 ${style}`}>
       {pending ? "Guardando…" : children}
@@ -90,8 +90,8 @@ function UserRow({ user, isMe }: { user: ManagedUser; isMe: boolean }) {
         <div className="min-w-0">
           <div className="font-medium">
             {user.full_name}
-            {isMe && <span className="ml-2 rounded bg-[#E6F1EF] px-2 py-0.5 text-xs text-lexi">Tú</span>}
-            {!user.active && <span className="ml-2 rounded bg-[#FBE9E7] px-2 py-0.5 text-xs text-[#9A2D20]">Desactivado</span>}
+            {isMe && <span className="ml-2 rounded bg-lexi-soft px-2 py-0.5 text-xs text-lexi">Tú</span>}
+            {!user.active && <span className="ml-2 rounded bg-danger-soft px-2 py-0.5 text-xs text-danger">Desactivado</span>}
           </div>
           <div className="truncate text-sm text-muted">{user.email}</div>
         </div>

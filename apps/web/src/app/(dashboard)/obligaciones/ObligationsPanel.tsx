@@ -23,7 +23,7 @@ function Submit({ count }: { count: number }) {
 
 function Banner({ tone, children }: { tone: "error" | "ok"; children: React.ReactNode }) {
   const style =
-    tone === "error" ? "border-[#E7B8B1] bg-[#FBE9E7] text-[#9A2D20]" : "border-[#B7D6D2] bg-[#E6F1EF] text-lexi";
+    tone === "error" ? "border-danger-line bg-danger-soft text-danger" : "border-lexi-line bg-lexi-soft text-lexi";
   return (
     <div role={tone === "error" ? "alert" : "status"} className={`rounded-md border px-4 py-3 text-sm ${style}`}>
       {children}
@@ -34,7 +34,7 @@ function Banner({ tone, children }: { tone: "error" | "ok"; children: React.Reac
 function Badge({ item }: { item: ObligationItem }) {
   if (item.estado_verificacion === "verificado") return null;
   return (
-    <span className="rounded bg-[#FFF3D6] px-2 py-0.5 text-xs font-medium text-[#7A5600]">
+    <span className="rounded bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
       {item.estado_verificacion === "parcial" ? "Por confirmar en fuente oficial" : "Pendiente de verificar"}
     </span>
   );
@@ -71,10 +71,10 @@ export function ObligationsPanel({ catalog }: { catalog: ObligationList }) {
         <p className="min-w-0 flex-1 text-sm text-muted">
           {catalog.items.length} obligaciones · {catalog.items.filter((i) => i.loaded).length} ya cargadas como tarea.
         </p>
-        <button type="button" onClick={() => toggleAll(true)} className="min-h-11 rounded-md border border-line px-4 text-sm hover:bg-[#F5F4EF]">
+        <button type="button" onClick={() => toggleAll(true)} className="min-h-11 rounded-md border border-line px-4 text-sm hover:bg-paper">
           Marcar las pendientes
         </button>
-        <button type="button" onClick={() => toggleAll(false)} className="min-h-11 rounded-md border border-line px-4 text-sm hover:bg-[#F5F4EF]">
+        <button type="button" onClick={() => toggleAll(false)} className="min-h-11 rounded-md border border-line px-4 text-sm hover:bg-paper">
           Quitar marcas
         </button>
       </div>
@@ -101,15 +101,15 @@ export function ObligationsPanel({ catalog }: { catalog: ObligationList }) {
                     disabled={i.loaded}
                     checked={checked}
                     onChange={(e) => setPicked((p) => ({ ...p, [i.id]: e.target.checked }))}
-                    className="mt-1 h-5 w-5 shrink-0 accent-[#1F7A68]"
+                    className="mt-1 h-5 w-5 shrink-0 accent-lexi-bright"
                   />
                   <div className="flex min-w-0 flex-1 flex-col gap-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="font-medium">{i.titulo}</h3>
                       <div className="flex flex-wrap gap-2">
-                        {i.loaded && <span className="rounded bg-[#E6F1EF] px-2 py-0.5 text-xs font-medium text-lexi">Ya es tarea</span>}
+                        {i.loaded && <span className="rounded bg-lexi-soft px-2 py-0.5 text-xs font-medium text-lexi">Ya es tarea</span>}
                         <Badge item={i} />
-                        <span className="rounded bg-[#F5F4EF] px-2 py-0.5 text-xs">{FRECUENCIA_LABEL[i.frecuencia]}</span>
+                        <span className="rounded bg-paper px-2 py-0.5 text-xs">{FRECUENCIA_LABEL[i.frecuencia]}</span>
                       </div>
                     </div>
                     <p className="text-sm">{i.obligacion}</p>
@@ -130,7 +130,7 @@ export function ObligationsPanel({ catalog }: { catalog: ObligationList }) {
         );
       })}
 
-      <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-line bg-[#FAF9F5] py-3">
+      <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-line bg-paper-soft py-3">
         <Submit count={count} />
         <p className="text-xs text-muted">Las fechas son una propuesta inicial; ajústalas según tu caso.</p>
       </div>
