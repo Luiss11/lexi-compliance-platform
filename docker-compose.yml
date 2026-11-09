@@ -1,65 +1,119 @@
-name: lexi
+# Pila de PRODUCCION. Desarrollo sigue usando docker-compose.yml.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# (o simplemente: make prod-up). Guia completa: docs/INSTALACION_PRODUCCION.md
+#
+# Diferencias con desarrollo:
+#   - Solo Caddy publica puertos (80 y 443). Postgres, Qdrant, la API y la web solo son
+#     alcanzables dentro de la red interna de Docker.
+#   - Caddy obtiene y renueva el certificado HTTPS solo (Let's Encrypt).
+#   - La web es una compilacion de produccion (next build) y la API corre sin --reload.
+#   - Sin valores por defecto para secretos: si falta uno, docker compose se niega a arrancar.
+#   - Todo se reinicia solo si el proceso cae o el servidor se reinicia.
+
+name: lexi-prod
+
+x-db-url: &db-url postgresql://${POSTGRES_USER:?Falta POSTGRES_USER en .env.prod}:${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env.prod}@postgres:5432/${POSTGRES_DB:?Falta POSTGRES_DB en .env.prod}
 
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-lexi}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lexi_dev}
-      POSTGRES_DB: ${POSTGRES_DB:-lexi}
-    ports: ["5432:5432"]
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes: [pg_data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lexi}"]
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
-      retries: 10
+      retries: 20
 
   qdrant:
     image: qdrant/qdrant:v1.11.0
-    ports: ["6333:6333"]
+    restart: unless-stopped
     volumes: [qdrant_data:/qdrant/storage]
 
   api:
     build: ./services/api
-    env_file: .env
+    restart: unless-stopped
+    env_file: .env.prod
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-lexi}:${POSTGRES_PASSWORD:-lexi_dev}@postgres:5432/${POSTGRES_DB:-lexi}
+      APP_ENV: production
+      DATABASE_URL: *db-url
       QDRANT_URL: http://qdrant:6333
       STORAGE_DIR: /data/storage
-      CORS_ORIGINS: '["http://localhost:4000"]'
-    volumes:
-      - ./services/api/app:/srv/app
-      - storage:/data/storage
-    ports: ["8000:8000"]
+      CORS_ORIGINS: '["https://${DOMAIN:?Falta DOMAIN en .env.prod}"]'
+    # Sin --reload. --proxy-headers: la API solo es alcanzable desde la red interna, asi que
+    # puede confiar en el X-Forwarded-For que le pasa la web (la IP real del visitante).
+    # Un solo proceso: los contadores de limites (login, IA) viven en memoria.
+    command:
+      - uvicorn
+      - app.main:app
+      - --host=0.0.0.0
+      - --port=8000
+      - --proxy-headers
+      - --forwarded-allow-ips=*
+      - --no-server-header
+    volumes: [storage:/data/storage]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
       postgres: { condition: service_healthy }
       qdrant: { condition: service_started }
 
-  web:
-    build: ./apps/web
-    env_file: .env
+  # Contenedor de un solo uso: aplica las migraciones Prisma y termina.
+  migrate:
+    build:
+      { context: ./apps/web, dockerfile: Dockerfile.prod, target: migrator }
+    restart: "no"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-lexi}:${POSTGRES_PASSWORD:-lexi_dev}@postgres:5432/${POSTGRES_DB:-lexi}
-      # El navegador usa localhost; el servidor de Next (dentro de Docker) usa el nombre del servicio
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
-      API_INTERNAL_URL: http://api:8000/api/v1
-      # Sin esto, en Windows Next no detecta los cambios de los archivos montados
-      WATCHPACK_POLLING: "true"
-      PORT: "4000"
-    volumes:
-      - ./apps/web/src:/app/src
-      - ./apps/web/prisma:/app/prisma
-      # Montado para que un cambio en la configuración no obligue a reconstruir la imagen
-      - ./apps/web/next.config.mjs:/app/next.config.mjs
-      - ./apps/web/tailwind.config.ts:/app/tailwind.config.ts
-    # Mismo puerto dentro y fuera: las server actions que redirigen piden la página
-    # siguiente al host del navegador (localhost:4000) desde dentro del contenedor
-    ports: ["4000:4000"]
+      DATABASE_URL: *db-url
     depends_on:
       postgres: { condition: service_healthy }
-      api: { condition: service_started }
+
+  web:
+    build: { context: ./apps/web, dockerfile: Dockerfile.prod, target: runner }
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:8000/api/v1
+      # El middleware de Next valida la cookie de sesion con este mismo secreto que usa la API.
+      # Sin esto, el login responde 200 pero la web nunca reconoce la sesion.
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env.prod}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      api: { condition: service_healthy }
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Falta ACME_EMAIL en .env.prod}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
 
 volumes:
   pg_data:
   qdrant_data:
   storage:
+  caddy_data:
+  caddy_config:

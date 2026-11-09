@@ -1,14 +1,14 @@
-# Pila de PRODUCCIÓN. Desarrollo sigue usando docker-compose.yml.
+# Pila de PRODUCCION. Desarrollo sigue usando docker-compose.yml.
 #
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 #
-# (o simplemente: make prod-up). Guía completa: docs/INSTALACION_PRODUCCION.md
+# (o simplemente: make prod-up). Guia completa: docs/INSTALACION_PRODUCCION.md
 #
 # Diferencias con desarrollo:
 #   - Solo Caddy publica puertos (80 y 443). Postgres, Qdrant, la API y la web solo son
 #     alcanzables dentro de la red interna de Docker.
 #   - Caddy obtiene y renueva el certificado HTTPS solo (Let's Encrypt).
-#   - La web es una compilación de producción (next build) y la API corre sin --reload.
+#   - La web es una compilacion de produccion (next build) y la API corre sin --reload.
 #   - Sin valores por defecto para secretos: si falta uno, docker compose se niega a arrancar.
 #   - Todo se reinicia solo si el proceso cae o el servidor se reinicia.
 
@@ -26,7 +26,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes: [pg_data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
       retries: 20
 
@@ -45,9 +45,9 @@ services:
       QDRANT_URL: http://qdrant:6333
       STORAGE_DIR: /data/storage
       CORS_ORIGINS: '["https://${DOMAIN:?Falta DOMAIN en .env.prod}"]'
-    # Sin --reload. --proxy-headers: la API solo es alcanzable desde la red interna, así que
+    # Sin --reload. --proxy-headers: la API solo es alcanzable desde la red interna, asi que
     # puede confiar en el X-Forwarded-For que le pasa la web (la IP real del visitante).
-    # Un solo proceso: los contadores de límites (login, IA) viven en memoria.
+    # Un solo proceso: los contadores de limites (login, IA) viven en memoria.
     command:
       - uvicorn
       - app.main:app
@@ -58,7 +58,13 @@ services:
       - --no-server-header
     volumes: [storage:/data/storage]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -69,7 +75,8 @@ services:
 
   # Contenedor de un solo uso: aplica las migraciones Prisma y termina.
   migrate:
-    build: { context: ./apps/web, dockerfile: Dockerfile.prod, target: migrator }
+    build:
+      { context: ./apps/web, dockerfile: Dockerfile.prod, target: migrator }
     restart: "no"
     environment:
       DATABASE_URL: *db-url
@@ -81,6 +88,9 @@ services:
     restart: unless-stopped
     environment:
       API_INTERNAL_URL: http://api:8000/api/v1
+      # El middleware de Next valida la cookie de sesion con este mismo secreto que usa la API.
+      # Sin esto, el login responde 200 pero la web nunca reconoce la sesion.
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env.prod}
     depends_on:
       migrate: { condition: service_completed_successfully }
       api: { condition: service_healthy }
