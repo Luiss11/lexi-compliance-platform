@@ -81,7 +81,10 @@ done < <(sql 'select "tenantId", id, sha256 from documents')
 [[ "$bad" -eq 0 ]] || die "$bad archivo(s) faltan o no coinciden con su SHA-256 sellado."
 log "OK  $n_evidence evidencia(s) y $n_docs documento(s) presentes y con SHA-256 íntegro"
 
-tar -tzf "$src/qdrant.tar.gz" | grep -q '^\./collections' \
+# Sin grep -q: con pipefail, grep -q cierra la tubería antes de que tar termine y tar
+# falla por SIGPIPE, lo que daba un falso "no contiene colecciones" en índices grandes.
+qdrant_files="$(tar -tzf "$src/qdrant.tar.gz")" || die "qdrant.tar.gz no se puede leer."
+grep '^\./collections/' <<< "$qdrant_files" > /dev/null \
   || die "qdrant.tar.gz no contiene colecciones."
 log "OK  índice de Qdrant legible"
 
