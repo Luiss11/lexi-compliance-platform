@@ -31,6 +31,11 @@ export async function middleware(req: NextRequest) {
 
   const role = await readRole(req);
 
+  // La raíz es la página pública de presentación; quien ya inició sesión va a su panel
+  if (pathname === "/") {
+    return role ? go(req, "/panel") : NextResponse.next();
+  }
+
   if (pathname.startsWith("/login")) {
     return role ? go(req, "/panel") : NextResponse.next();
   }
